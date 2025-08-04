@@ -40,72 +40,12 @@
             position: relative;
         }
 
-        .logo-upload {
-            display: inline-block;
-            cursor: pointer;
-            border: 2px dashed #FFD700;
-            border-radius: 10px;
-            padding: 20px;
-            transition: all 0.3s ease;
-            background: rgba(255, 215, 0, 0.1);
-            min-width: 200px;
-            min-height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .logo-upload:hover {
-            background: rgba(255, 215, 0, 0.2);
-            border-color: #FFA500;
-        }
-
-        .logo-upload.has-image {
-            border: none;
-            padding: 0;
-            background: transparent;
-        }
-
         .logo-image {
-            max-height: 100px;
-            max-width: 250px;
+            max-height: 120px;
+            max-width: 300px;
             object-fit: contain;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
-        }
-
-        .upload-text {
-            color: #FFD700;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .logo-upload.has-image .upload-text {
-            display: none;
-        }
-
-        .remove-logo {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            display: none;
-        }
-
-        .logo-upload.has-image:hover .remove-logo {
-            display: block;
-        }
-
-        #logoInput {
-            display: none;
         }
 
         .header h1 {
@@ -440,14 +380,7 @@
     <div class="container">
         <div class="header">
             <div class="logo-container">
-                <label for="logoInput" class="logo-upload" id="logoUpload">
-                    <div class="upload-text">
-                        📸 Clique para adicionar o logo<br>
-                        <small>(PNG, JPG - máx. 2MB)</small>
-                    </div>
-                    <button class="remove-logo" onclick="removeLogo(event)">×</button>
-                </label>
-                <input type="file" id="logoInput" accept="image/*" onchange="handleLogoUpload(event)">
+                <img src="https://drive.google.com/uc?export=view&id=1Hjo5hZWd9tFvUVCrIL2jwIcgpJkIGV3k" alt="Logo Academia Performance" class="logo-image">
             </div>
             <h1>Academia Performance</h1>
             <p>Sistema de Controle de Avaliações</p>
@@ -686,43 +619,6 @@
                 });
                 updateAllStudentsList();
             }
-        }
-
-        // Funções para upload de logo
-        function handleLogoUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                if (file.size > 2 * 1024 * 1024) { // 2MB
-                    alert('O arquivo deve ter no máximo 2MB');
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const logoUpload = document.getElementById('logoUpload');
-                    logoUpload.innerHTML = `
-                        <img src="${e.target.result}" alt="Logo" class="logo-image">
-                        <button class="remove-logo" onclick="removeLogo(event)">×</button>
-                    `;
-                    logoUpload.classList.add('has-image');
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function removeLogo(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            const logoUpload = document.getElementById('logoUpload');
-            logoUpload.innerHTML = `
-                <div class="upload-text">
-                    📸 Clique para adicionar o logo<br>
-                    <small>(PNG, JPG - máx. 2MB)</small>
-                </div>
-                <button class="remove-logo" onclick="removeLogo(event)">×</button>
-            `;
-            logoUpload.classList.remove('has-image');
-            document.getElementById('logoInput').value = '';
         }
 
         // Exportar dados para Google Sheets
