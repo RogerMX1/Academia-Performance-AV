@@ -35,8 +35,6 @@
             position: relative;
         }
 
-
-
         .logo-container {
             margin-bottom: 20px;
             display: flex;
@@ -354,6 +352,17 @@
             font-weight: bold;
         }
 
+        .auto-clean-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #1976d2;
+            font-size: 14px;
+        }
+
         @media (max-width: 768px) {
             .professors-grid {
                 grid-template-columns: 1fr;
@@ -412,6 +421,11 @@
         <div class="table-container">
             <div class="month-display" id="currentMonth"></div>
             
+            <div class="auto-clean-info">
+                ℹ️ Os dados são salvos automaticamente e permanecem durante todo o mês. 
+                A cada virada de mês, as avaliações já concluídas são automaticamente removidas.
+            </div>
+            
             <div class="professors-grid" id="professorsGrid">
                 <!-- Colunas dos professores serão geradas aqui -->
             </div>
@@ -421,16 +435,84 @@
             <button onclick="resetAllEvaluations()">Resetar Avaliações do Mês</button>
             <button onclick="exportData()">Exportar Dados</button>
         </div>
+
+        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 14px; font-style: italic;">
+            BY Roger Medeiros Xavier
+        </div>
     </div>
 
     <script>
         const professors = ['Robson', 'Roger', 'Maicon', 'Roberto', 'Naldon', 'Helízia', 'Danielle'];
         let studentsData = {};
 
+        // Chaves para localStorage
+        const STORAGE_KEY = 'academiaPerformanceData';
+        const LAST_CLEANUP_KEY = 'academiaPerformanceLastCleanup';
+
         // Inicializar dados dos professores
-        professors.forEach(prof => {
-            studentsData[prof] = [];
-        });
+        function initializeProfessorsData() {
+            professors.forEach(prof => {
+                if (!studentsData[prof]) {
+                    studentsData[prof] = [];
+                }
+            });
+        }
+
+        // Salvar dados no localStorage
+        function saveData() {
+            const dataToSave = {
+                studentsData: studentsData,
+                timestamp: new Date().toISOString()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+        }
+
+        // Carregar dados do localStorage
+        function loadData() {
+            try {
+                const savedData = localStorage.getItem(STORAGE_KEY);
+                if (savedData) {
+                    const parsed = JSON.parse(savedData);
+                    studentsData = parsed.studentsData || {};
+                    console.log('Dados carregados do localStorage');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                studentsData = {};
+            }
+            
+            initializeProfessorsData();
+        }
+
+        // Verificar se precisa fazer limpeza mensal
+        function checkMonthlyCleanup() {
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            const currentMonthKey = `${currentYear}-${currentMonth}`;
+            
+            const lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+            
+            if (lastCleanup !== currentMonthKey) {
+                // É um novo mês, fazer limpeza
+                performMonthlyCleanup();
+                localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
+                console.log('Limpeza mensal realizada automaticamente');
+            }
+        }
+
+        // Realizar limpeza mensal automática
+        function performMonthlyCleanup() {
+            professors.forEach(prof => {
+                if (studentsData[prof]) {
+                    // Remove apenas alunos que já completaram o processo (status 'completed')
+                    studentsData[prof] = studentsData[prof].filter(student => 
+                        student.status !== 'completed'
+                    );
+                }
+            });
+            saveData();
+        }
 
         // Exibir mês atual
         function updateCurrentMonth() {
@@ -495,6 +577,7 @@
                 input.value = '';
                 updateStudentsList(professor);
                 updateStats();
+                saveData(); // Salvar automaticamente
             }
         }
 
@@ -503,6 +586,7 @@
             studentsData[professor].splice(index, 1);
             updateStudentsList(professor);
             updateStats();
+            saveData(); // Salvar automaticamente
         }
 
         // Marcar avaliação como feita
@@ -513,6 +597,7 @@
                 student.evaluatedDate = new Date().toISOString();
                 updateStudentsList(professor);
                 updateStats();
+                saveData(); // Salvar automaticamente
             }
         }
 
@@ -524,6 +609,7 @@
                 student.completedDate = new Date().toISOString();
                 updateStudentsList(professor);
                 updateStats();
+                saveData(); // Salvar automaticamente
             }
         }
 
@@ -622,6 +708,7 @@
                     });
                 });
                 updateAllStudentsList();
+                saveData(); // Salvar após reset
             }
         }
 
@@ -685,8 +772,29 @@
         }
 
         // Inicializar aplicação
-        updateCurrentMonth();
-        createProfessorsInterface();
+        function initializeApp() {
+            // Carregar dados salvos
+            loadData();
+            
+            // Verificar se precisa fazer limpeza mensal
+            checkMonthlyCleanup();
+            
+            // Atualizar interface
+            updateCurrentMonth();
+            createProfessorsInterface();
+            
+            console.log('Sistema iniciado com persistência de dados');
+        }
+
+        // Inicializar quando a página carregar
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        // Salvar dados antes de fechar a página
+        window.addEventListener('beforeunload', function() {
+            saveData();
+        });
     </script>
 </body>
+</html>
+
 
