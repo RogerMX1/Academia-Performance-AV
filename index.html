@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Avaliações - Academia Performance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #000000, #1a1a1a);
+            color: #FFD700;
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .logo-upload {
+            display: inline-block;
+            cursor: pointer;
+            border: 2px dashed #FFD700;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            background: rgba(255, 215, 0, 0.1);
+            min-width: 200px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-upload:hover {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #FFA500;
+        }
+
+        .logo-upload.has-image {
+            border: none;
+            padding: 0;
+            background: transparent;
+        }
+
+        .logo-image {
+            max-height: 100px;
+            max-width: 250px;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        }
+
+        .upload-text {
+            color: #FFD700;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .logo-upload.has-image .upload-text {
+            display: none;
+        }
+
+        .remove-logo {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .logo-upload.has-image:hover .remove-logo {
+            display: block;
+        }
+
+        #logoInput {
+            display: none;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            word-wrap: break-word;
+            line-height: 1.2;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+            color: #FFFFFF;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #000000;
+            display: block;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .table-container {
+            padding: 30px;
+        }
+
+        .professors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .professor-column {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .professor-column:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .professor-header {
+            background: linear-gradient(135deg, #000000, #1a1a1a);
+            color: #FFD700;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+            border: 2px solid #FFD700;
+        }
+
+        .add-person {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .add-person input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .add-person input:focus {
+            outline: none;
+            border-color: #FFD700;
+        }
+
+        .add-person button {
+            padding: 10px 15px;
+            background: #FFD700;
+            color: #000000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .add-person button:hover {
+            background: #E6C200;
+        }
+
+        .students-list {
+            min-height: 200px;
+        }
+
+        .student-item {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .student-item:hover {
+            transform: translateX(5px);
+        }
+
+        .student-item.completed {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .student-name {
+            flex: 1;
+            font-weight: 500;
+            color: #000000;
+            width: 100%;
+        }
+
+        .student-item.evaluated .student-name {
+            color: #856404;
+            font-weight: bold;
+        }
+
+        .student-item.completed .student-name {
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .student-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .student-dates {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+            line-height: 1.3;
+        }
+
+        .student-item.evaluated .student-dates {
+            color: #856404;
+        }
+
+        .student-item.completed .student-dates {
+            color: #0f5132;
+        }
+
+        .date-label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .eval-btn, .delivery-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .eval-btn {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .eval-btn:hover {
+            background: #e0a800;
+        }
+
+        .eval-btn:disabled {
+            background: #6c757d;
+            color: #fff;
+            cursor: not-allowed;
+        }
+
+        .delivery-btn {
+            background: #28a745;
+            color: #fff;
+        }
+
+        .delivery-btn:hover {
+            background: #218838;
+        }
+
+        .delivery-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .student-item.evaluated .status-indicator {
+            background: #ffc107;
+        }
+
+        .student-item.completed .status-indicator {
+            background: #28a745;
+        }
+
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .student-item:hover .remove-btn {
+            opacity: 1;
+        }
+
+        .remove-btn:hover {
+            background: #c82333;
+        }
+
+        .controls {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .controls button {
+            background: #000000;
+            color: #FFD700;
+            border: 2px solid #FFD700;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .controls button:hover {
+            background: #FFD700;
+            color: #000000;
+            transform: translateY(-2px);
+        }
+
+        .month-display {
+            font-size: 1.2em;
+            color: #000000;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .professors-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .add-person {
+                flex-direction: column;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+                letter-spacing: 1px;
+                line-height: 1.1;
+            }
+            
+            .header {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-container">
+                <label for="logoInput" class="logo-upload" id="logoUpload">
+                    <div class="upload-text">
+                        📸 Clique para adicionar o logo<br>
+                        <small>(PNG, JPG - máx. 2MB)</small>
+                    </div>
+                    <button class="remove-logo" onclick="removeLogo(event)">×</button>
+                </label>
+                <input type="file" id="logoInput" accept="image/*" onchange="handleLogoUpload(event)">
+            </div>
+            <h1>Academia Performance</h1>
+            <p>Sistema de Controle de Avaliações</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-number" id="totalStudents">0</span>
+                <div class="stat-label">Total de Alunos</div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="evaluatedStudents">0</span>
+                <div class="stat-label">Avaliações Feitas</div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="completedDeliveries">0</span>
+                <div class="stat-label">Treinos Entregues</div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="pendingStudents">0</span>
+                <div class="stat-label">Pendentes</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="month-display" id="currentMonth"></div>
+            
+            <div class="professors-grid" id="professorsGrid">
+                <!-- Colunas dos professores serão geradas aqui -->
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="resetAllEvaluations()">Resetar Avaliações do Mês</button>
+            <button onclick="exportData()">Exportar Dados</button>
+        </div>
+    </div>
+
+    <script>
+        const professors = ['Robson', 'Roger', 'Maicon', 'Roberto', 'Naldon', 'Helízia', 'Danielle'];
+        let studentsData = {};
+
+        // Inicializar dados dos professores
+        professors.forEach(prof => {
+            studentsData[prof] = [];
+        });
+
+        // Exibir mês atual
+        function updateCurrentMonth() {
+            const now = new Date();
+            const monthNames = [
+                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+            ];
+            document.getElementById('currentMonth').textContent = 
+                `Controle de Avaliações - ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+        }
+
+        // Criar interface dos professores
+        function createProfessorsInterface() {
+            const container = document.getElementById('professorsGrid');
+            container.innerHTML = '';
+
+            professors.forEach(professor => {
+                const column = document.createElement('div');
+                column.className = 'professor-column';
+                column.innerHTML = `
+                    <div class="professor-header">
+                        ${professor}
+                    </div>
+                    <div class="add-person">
+                        <input type="text" placeholder="Nome do aluno" id="input-${professor}">
+                        <button onclick="addStudent('${professor}')">Adicionar</button>
+                    </div>
+                    <div class="students-list" id="students-${professor}">
+                        <!-- Lista de alunos -->
+                    </div>
+                `;
+                container.appendChild(column);
+
+                // Adicionar evento Enter no input
+                const input = column.querySelector(`#input-${professor}`);
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        addStudent(professor);
+                    }
+                });
+            });
+
+            updateAllStudentsList();
+        }
+
+        // Adicionar aluno
+        function addStudent(professor) {
+            const input = document.getElementById(`input-${professor}`);
+            const studentName = input.value.trim();
+            
+            if (studentName) {
+                const student = {
+                    name: studentName,
+                    status: 'pending', // pending, evaluated, completed
+                    addedDate: new Date().toISOString(),
+                    evaluatedDate: null,
+                    completedDate: null
+                };
+                
+                studentsData[professor].push(student);
+                input.value = '';
+                updateStudentsList(professor);
+                updateStats();
+            }
+        }
+
+        // Remover aluno
+        function removeStudent(professor, index) {
+            studentsData[professor].splice(index, 1);
+            updateStudentsList(professor);
+            updateStats();
+        }
+
+        // Marcar avaliação como feita
+        function markEvaluated(professor, index) {
+            const student = studentsData[professor][index];
+            if (student.status === 'pending') {
+                student.status = 'evaluated';
+                student.evaluatedDate = new Date().toISOString();
+                updateStudentsList(professor);
+                updateStats();
+            }
+        }
+
+        // Marcar treino como entregue
+        function markDelivered(professor, index) {
+            const student = studentsData[professor][index];
+            if (student.status === 'evaluated') {
+                student.status = 'completed';
+                student.completedDate = new Date().toISOString();
+                updateStudentsList(professor);
+                updateStats();
+            }
+        }
+
+        // Atualizar lista de alunos de um professor
+        function updateStudentsList(professor) {
+            const container = document.getElementById(`students-${professor}`);
+            const students = studentsData[professor];
+            
+            container.innerHTML = '';
+            
+            students.forEach((student, index) => {
+                const item = document.createElement('div');
+                item.className = `student-item ${student.status}`;
+                
+                const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
+                const evaluatedDate = student.evaluatedDate ? 
+                    new Date(student.evaluatedDate).toLocaleDateString("pt-BR") : null;
+                const completedDate = student.completedDate ? 
+                    new Date(student.completedDate).toLocaleDateString("pt-BR") : null;
+                
+                let datesHTML = `<span class="date-label">Adicionado:</span>${addedDate}`;
+                if (evaluatedDate) {
+                    datesHTML += `<br><span class="date-label">Avaliação:</span>${evaluatedDate}`;
+                }
+                if (completedDate) {
+                    datesHTML += `<br><span class="date-label">Entregue:</span>${completedDate}`;
+                }
+                
+                // Criar botões baseados no status
+                let buttonsHTML = '';
+                if (student.status === 'pending') {
+                    buttonsHTML = `<button class="eval-btn" onclick="markEvaluated('${professor}', ${index})">Avaliar</button>`;
+                } else if (student.status === 'evaluated') {
+                    buttonsHTML = `
+                        <button class="eval-btn" disabled>✓ Avaliado</button>
+                        <button class="delivery-btn" onclick="markDelivered('${professor}', ${index})">Entregar</button>
+                    `;
+                } else if (student.status === 'completed') {
+                    buttonsHTML = `
+                        <button class="eval-btn" disabled>✓ Avaliado</button>
+                        <button class="delivery-btn" disabled>✓ Entregue</button>
+                    `;
+                }
+                
+                item.innerHTML = `
+                    <div class="student-header">
+                        <div class="student-name">${student.name}</div>
+                        <div class="action-buttons">
+                            ${buttonsHTML}
+                            <div class="status-indicator"></div>
+                            <button class="remove-btn" onclick="removeStudent('${professor}', ${index})">×</button>
+                        </div>
+                    </div>
+                    <div class="student-dates">${datesHTML}</div>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+
+        // Atualizar todas as listas
+        function updateAllStudentsList() {
+            professors.forEach(prof => updateStudentsList(prof));
+            updateStats();
+        }
+
+        // Atualizar estatísticas
+        function updateStats() {
+            let totalStudents = 0;
+            let evaluatedStudents = 0;
+            let completedDeliveries = 0;
+
+            professors.forEach(prof => {
+                const students = studentsData[prof];
+                totalStudents += students.length;
+                evaluatedStudents += students.filter(s => s.status === 'evaluated' || s.status === 'completed').length;
+                completedDeliveries += students.filter(s => s.status === 'completed').length;
+            });
+
+            const pendingStudents = totalStudents - evaluatedStudents - completedDeliveries;
+
+            document.getElementById('totalStudents').textContent = totalStudents;
+            document.getElementById('evaluatedStudents').textContent = evaluatedStudents;
+            document.getElementById('completedDeliveries').textContent = completedDeliveries;
+            document.getElementById('pendingStudents').textContent = pendingStudents;
+        }
+
+        // Resetar todas as avaliações
+        function resetAllEvaluations() {
+            if (confirm('Tem certeza que deseja resetar todas as avaliações do mês? Esta ação não pode ser desfeita.')) {
+                professors.forEach(prof => {
+                    studentsData[prof].forEach(student => {
+                        student.status = 'pending';
+                        student.evaluatedDate = null;
+                        student.completedDate = null;
+                    });
+                });
+                updateAllStudentsList();
+            }
+        }
+
+        // Funções para upload de logo
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) { // 2MB
+                    alert('O arquivo deve ter no máximo 2MB');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const logoUpload = document.getElementById('logoUpload');
+                    logoUpload.innerHTML = `
+                        <img src="${e.target.result}" alt="Logo" class="logo-image">
+                        <button class="remove-logo" onclick="removeLogo(event)">×</button>
+                    `;
+                    logoUpload.classList.add('has-image');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeLogo(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const logoUpload = document.getElementById('logoUpload');
+            logoUpload.innerHTML = `
+                <div class="upload-text">
+                    📸 Clique para adicionar o logo<br>
+                    <small>(PNG, JPG - máx. 2MB)</small>
+                </div>
+                <button class="remove-logo" onclick="removeLogo(event)">×</button>
+            `;
+            logoUpload.classList.remove('has-image');
+            document.getElementById('logoInput').value = '';
+        }
+
+        // Exportar dados para Google Sheets
+        function exportData() {
+            // Criar dados em formato CSV para Google Sheets
+            let csvContent = "Professor,Aluno,Status,Data de Adição,Data da Avaliação,Data de Entrega\n";
+            
+            professors.forEach(professor => {
+                if (studentsData[professor].length === 0) {
+                    csvContent += `${professor},Nenhum aluno cadastrado,,,,,\n`;
+                } else {
+                    studentsData[professor].forEach(student => {
+                        let status = '';
+                        if (student.status === 'pending') status = 'Pendente';
+                        else if (student.status === 'evaluated') status = 'Avaliado';
+                        else if (student.status === 'completed') status = 'Entregue';
+                        
+                        const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
+                        const evaluatedDate = student.evaluatedDate ? 
+                            new Date(student.evaluatedDate).toLocaleDateString("pt-BR") : "";
+                        const completedDate = student.completedDate ? 
+                            new Date(student.completedDate).toLocaleDateString("pt-BR") : "";
+                        csvContent += `${professor},"${student.name}",${status},${addedDate},${evaluatedDate},${completedDate}\n`;
+                    });
+                }
+            });
+            
+            // Adicionar resumo estatístico
+            csvContent += "\n";
+            csvContent += "RESUMO ESTATÍSTICO\n";
+            csvContent += "Descrição,Quantidade\n";
+            csvContent += `Total de Alunos,${document.getElementById('totalStudents').textContent}\n`;
+            csvContent += `Avaliações Feitas,${document.getElementById('evaluatedStudents').textContent}\n`;
+            csvContent += `Treinos Entregues,${document.getElementById('completedDeliveries').textContent}\n`;
+            csvContent += `Pendentes,${document.getElementById('pendingStudents').textContent}\n`;
+            
+            // Adicionar informações do mês
+            const now = new Date();
+            const monthNames = [
+                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+            ];
+            csvContent += `Mês de Referência,"${monthNames[now.getMonth()]} ${now.getFullYear()}"\n`;
+            csvContent += `Data de Exportação,"${now.toLocaleDateString("pt-BR")} ${now.toLocaleTimeString("pt-BR")}"\n`;
+            
+            // Criar e baixar o arquivo CSV
+            const BOM = '\uFEFF'; // BOM para garantir encoding UTF-8
+            const dataBlob = new Blob([BOM + csvContent], {type: 'text/csv;charset=utf-8'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `avaliacoes_performance_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}.csv`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            
+            // Mostrar instruções para o usuário
+            alert('Arquivo CSV exportado com sucesso!\n\nPara importar no Google Sheets:\n1. Abra o Google Sheets\n2. Clique em "Arquivo" > "Importar"\n3. Selecione o arquivo CSV baixado\n4. Escolha "Substituir planilha" ou "Inserir nova planilha"\n5. Clique em "Importar dados"');
+        }
+
+        // Inicializar aplicação
+        updateCurrentMonth();
+        createProfessorsInterface();
+    </script>
+</body>
+</html>
