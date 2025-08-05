@@ -185,6 +185,18 @@
             transform: translateX(5px);
         }
 
+        .student-item.scheduled {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+
+        .student-item.evaluated {
+            background: #cce5ff;
+            border-color: #74b9ff;
+            color: #0056b3;
+        }
+
         .student-item.completed {
             background: #d4edda;
             border-color: #c3e6cb;
@@ -198,8 +210,13 @@
             width: 100%;
         }
 
-        .student-item.evaluated .student-name {
+        .student-item.scheduled .student-name {
             color: #856404;
+            font-weight: bold;
+        }
+
+        .student-item.evaluated .student-name {
+            color: #0056b3;
             font-weight: bold;
         }
 
@@ -222,8 +239,12 @@
             line-height: 1.3;
         }
 
-        .student-item.evaluated .student-dates {
+        .student-item.scheduled .student-dates {
             color: #856404;
+        }
+
+        .student-item.evaluated .student-dates {
+            color: #0056b3;
         }
 
         .student-item.completed .student-dates {
@@ -289,8 +310,12 @@
             transition: all 0.3s ease;
         }
 
-        .student-item.evaluated .status-indicator {
+        .student-item.scheduled .status-indicator {
             background: #ffc107;
+        }
+
+        .student-item.evaluated .status-indicator {
+            background: #007bff;
         }
 
         .student-item.completed .status-indicator {
@@ -704,10 +729,11 @@
             if (studentName) {
                 const student = {
                     name: studentName,
-                    status: 'pending', // pending, evaluated, completed
+                    status: 'pending', // pending, scheduled, evaluated, completed
                     addedDate: new Date().toISOString(),
-                    evaluatedDate: null,
-                    completedDate: null
+                    scheduledDate: null, // Data agendada para avaliação
+                    evaluatedDate: null, // Data real da avaliação
+                    completedDate: null  // Data real da entrega
                 };
                 
                 studentsData[professor].push(student);
@@ -740,12 +766,15 @@
             const timeInput = document.getElementById('modalTime');
             
             // Configurar textos do modal
-            if (action === 'evaluate') {
-                title.textContent = 'Marcar Avaliação';
+            if (action === 'schedule') {
+                title.textContent = 'Agendar Avaliação';
                 subtitle.textContent = `Para: ${studentName}`;
-            } else if (action === 'deliver') {
-                title.textContent = 'Marcar Entrega';
-                subtitle.textContent = `Treino para: ${studentName}`;
+            } else if (action === 'confirm_evaluation') {
+                title.textContent = 'Confirmar Avaliação Realizada';
+                subtitle.textContent = `Para: ${studentName}`;
+            } else if (action === 'confirm_delivery') {
+                title.textContent = 'Confirmar Entrega do Treino';
+                subtitle.textContent = `Para: ${studentName}`;
             }
             
             // Definir data e hora atuais como padrão
@@ -784,10 +813,13 @@
                 
                 const student = studentsData[currentProfessor][currentStudentIndex];
                 
-                if (currentModalAction === 'evaluate' && student.status === 'pending') {
+                if (currentModalAction === 'schedule' && student.status === 'pending') {
+                    student.status = 'scheduled';
+                    student.scheduledDate = dateTime.toISOString();
+                } else if (currentModalAction === 'confirm_evaluation' && student.status === 'scheduled') {
                     student.status = 'evaluated';
                     student.evaluatedDate = dateTime.toISOString();
-                } else if (currentModalAction === 'deliver' && student.status === 'evaluated') {
+                } else if (currentModalAction === 'confirm_delivery' && student.status === 'evaluated') {
                     student.status = 'completed';
                     student.completedDate = dateTime.toISOString();
                 }
@@ -858,38 +890,38 @@
             }
         }
 
-        // Marcar avaliação como feita
-        function markEvaluated(professor, index) {
+        // Agendar avaliação
+        function scheduleEvaluation(professor, index) {
             const student = studentsData[professor][index];
             if (student.status === 'pending') {
-                openDateTimeModal('evaluate', professor, index, student.name);
+                openDateTimeModal('schedule', professor, index, student.name);
             }
         }
 
-        // Marcar treino como entregue
-        function markDelivered(professor, index) {
+        // Confirmar que avaliação foi realizada
+        function confirmEvaluation(professor, index) {
+            const student = studentsData[professor][index];
+            if (student.status === 'scheduled') {
+                openDateTimeModal('confirm_evaluation', professor, index, student.name);
+            }
+        }
+
+        // Confirmar que treino foi entregue
+        function confirmDelivery(professor, index) {
             const student = studentsData[professor][index];
             if (student.status === 'evaluated') {
-                // Solicitar data da entrega com formato brasileiro
-                const today = new Date();
-                const todayBR = today.toLocaleDateString('pt-BR');
-                const deliveryDate = prompt(`Digite a data de entrega do treino para ${student.name}:\n(Formato: DD/MM/AAAA)`, todayBR);
-                
-                if (deliveryDate) {
-                    // Converter data brasileira para ISO
-                    const dateISO = convertBRDateToISO(deliveryDate);
-                    if (dateISO) {
-                        student.status = 'completed';
-                        student.completedDate = dateISO;
-                        updateStudentsList(professor);
-                        updateStats();
-                        saveData(); // Salvar automaticamente
-                    } else {
-                        alert('Data inválida! Use o formato DD/MM/AAAA (ex: 15/08/2025)');
-                        return;
-                    }
-                }
+                openDateTimeModal('confirm_delivery', professor, index, student.name);
             }
+        }
+
+        // Marcar avaliação como feita (função antiga - mantida para compatibilidade)
+        function markEvaluated(professor, index) {
+            scheduleEvaluation(professor, index);
+        }
+
+        // Marcar treino como entregue (função antiga - mantida para compatibilidade)
+        function markDelivered(professor, index) {
+            confirmDelivery(professor, index);
         }
 
         // Atualizar lista de alunos de um professor
@@ -904,31 +936,43 @@
                 item.className = `student-item ${student.status}`;
                 
                 const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
+                const scheduledDate = student.scheduledDate ? 
+                    new Date(student.scheduledDate).toLocaleDateString("pt-BR") + ' às ' + 
+                    new Date(student.scheduledDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
                 const evaluatedDate = student.evaluatedDate ? 
-                    new Date(student.evaluatedDate).toLocaleDateString("pt-BR") : null;
+                    new Date(student.evaluatedDate).toLocaleDateString("pt-BR") + ' às ' + 
+                    new Date(student.evaluatedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
                 const completedDate = student.completedDate ? 
-                    new Date(student.completedDate).toLocaleDateString("pt-BR") : null;
+                    new Date(student.completedDate).toLocaleDateString("pt-BR") + ' às ' + 
+                    new Date(student.completedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
                 
                 let datesHTML = `<span class="date-label">Adicionado:</span>${addedDate}`;
+                if (scheduledDate) {
+                    datesHTML += `<br><span class="date-label">Agendado para:</span>${scheduledDate}`;
+                }
                 if (evaluatedDate) {
-                    datesHTML += `<br><span class="date-label">Avaliação:</span>${evaluatedDate}`;
+                    datesHTML += `<br><span class="date-label">Realizado em:</span>${evaluatedDate}`;
                 }
                 if (completedDate) {
-                    datesHTML += `<br><span class="date-label">Entregue:</span>${completedDate}`;
+                    datesHTML += `<br><span class="date-label">Entregue em:</span>${completedDate}`;
                 }
                 
                 // Criar botões baseados no status
                 let buttonsHTML = '';
                 if (student.status === 'pending') {
-                    buttonsHTML = `<button class="eval-btn" onclick="markEvaluated('${professor}', ${index})">Avaliar</button>`;
+                    buttonsHTML = `<button class="eval-btn" onclick="scheduleEvaluation('${professor}', ${index})">Agendar</button>`;
+                } else if (student.status === 'scheduled') {
+                    buttonsHTML = `
+                        <button class="eval-btn" style="background: #17a2b8; color: white;" onclick="confirmEvaluation('${professor}', ${index})">Confirmar Avaliação</button>
+                    `;
                 } else if (student.status === 'evaluated') {
                     buttonsHTML = `
-                        <button class="eval-btn" disabled>✓ Avaliado</button>
-                        <button class="delivery-btn" onclick="markDelivered('${professor}', ${index})">Entregar</button>
+                        <button class="eval-btn" disabled style="background: #007bff;">✓ Avaliado</button>
+                        <button class="delivery-btn" onclick="confirmDelivery('${professor}', ${index})">Entregar Treino</button>
                     `;
                 } else if (student.status === 'completed') {
                     buttonsHTML = `
-                        <button class="eval-btn" disabled>✓ Avaliado</button>
+                        <button class="eval-btn" disabled style="background: #007bff;">✓ Avaliado</button>
                         <button class="delivery-btn" disabled>✓ Entregue</button>
                     `;
                 }
@@ -994,7 +1038,7 @@
         // Exportar dados para Google Sheets
         function exportData() {
             // Criar dados em formato CSV para Google Sheets
-            let csvContent = "Professor,Aluno,Status,Data de Adição,Data da Avaliação,Data de Entrega\n";
+            let csvContent = "Professor,Aluno,Status,Data de Adição,Data Agendada,Data da Avaliação,Data de Entrega\n";
             
             professors.forEach(professor => {
                 if (studentsData[professor].length === 0) {
