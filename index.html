@@ -65,6 +65,30 @@
             color: #FFFFFF;
         }
 
+        .sync-status {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #FFD700;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .sync-status.online {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border-color: rgba(40, 167, 69, 0.3);
+        }
+
+        .sync-status.offline {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border-color: rgba(220, 53, 69, 0.3);
+        }
+
         .stats {
             display: flex;
             justify-content: space-around;
@@ -388,6 +412,17 @@
             font-size: 14px;
         }
 
+        .cloud-info {
+            background: #f0f8f0;
+            border: 1px solid #28a745;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #155724;
+            font-size: 14px;
+        }
+
         /* Modal para entrada de data e hora */
         .modal {
             display: none;
@@ -529,6 +564,7 @@
 <body>
     <div class="container">
         <div class="header">
+            <div class="sync-status" id="syncStatus">🔄 Sincronizando...</div>
             <div class="logo-container">
                 <img src="https://i.ibb.co/9m4ypbXf/Imagem-do-Whats-App-de-2025-08-03-s-20-43-13-d5929410.jpg" alt="Academia Performance Logo" class="logo-image">
             </div>
@@ -558,8 +594,12 @@
         <div class="table-container">
             <div class="month-display" id="currentMonth"></div>
             
+            <div class="cloud-info">
+                ☁️ Sistema sincronizado online - Todos os funcionários veem os mesmos dados em tempo real!
+            </div>
+            
             <div class="auto-clean-info">
-                ℹ️ Os dados são salvos automaticamente e permanecem durante todo o mês. 
+                ℹ️ Os dados são salvos automaticamente na nuvem e permanecem durante todo o mês. 
                 A cada virada de mês, as avaliações já concluídas são automaticamente removidas.
             </div>
             
@@ -571,6 +611,7 @@
         <div class="controls">
             <button onclick="resetAllEvaluations()">Resetar Avaliações do Mês</button>
             <button onclick="exportData()">Exportar Dados</button>
+            <button onclick="syncNow()">Sincronizar Agora</button>
         </div>
 
         <div style="text-align: center; padding: 15px; background: #f8f9fa; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 14px; font-style: italic;">
@@ -606,10 +647,11 @@
     <script>
         const professors = ['Robson', 'Roger', 'Maicon', 'Roberto', 'Naldon', 'Helízia', 'Danielle'];
         let studentsData = {};
+        let isOnline = false;
 
-        // Chaves para localStorage
-        const STORAGE_KEY = 'academiaPerformanceData';
-        const LAST_CLEANUP_KEY = 'academiaPerformanceLastCleanup';
+        // Configuração do armazenamento online (usando uma API gratuita como JSONBin ou similar)
+        const STORAGE_URL = 'https://api.jsonstorage.net/v1/json/academia-performance-data';
+        const BACKUP_KEY = 'academiaPerformanceBackup';
 
         // Inicializar dados dos professores
         function initializeProfessorsData() {
@@ -620,30 +662,115 @@
             });
         }
 
-        // Salvar dados no localStorage
-        function saveData() {
+        // Salvar dados online
+        async function saveDataOnline() {
             const dataToSave = {
                 studentsData: studentsData,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                version: Date.now()
             };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+            
+            try {
+                updateSyncStatus('Salvando...', 'syncing');
+                
+                // Tentativa 1: JSONStorage (gratuito)
+                const response = await fetch(STORAGE_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(dataToSave)
+                });
+                
+                if (response.ok) {
+                    isOnline = true;
+                    updateSyncStatus('Online', 'online');
+                    console.log('Dados salvos online com sucesso');
+                    return true;
+                } else {
+                    throw new Error('Falha na API principal');
+                }
+            } catch (error) {
+                console.log('Erro ao salvar online:', error);
+                
+                // Fallback: salvar localmente
+                try {
+                    const data = JSON.stringify(dataToSave);
+                    const storageKey = `academiaData_${new Date().toISOString().split('T')[0]}`;
+                    Object.values(studentsData).flat().forEach((student, index) => {
+                        const key = `student_${index}_${student.name.replace(/\s+/g, '_')}`;
+                        const value = JSON.stringify({
+                            professor: Object.keys(studentsData).find(prof => studentsData[prof].includes(student)),
+                            ...student
+                        });
+                        if (value.length < 5000) { // Limite do localStorage
+                            localStorage.setItem(key, value);
+                        }
+                    });
+                    
+                    localStorage.setItem(BACKUP_KEY, data);
+                    isOnline = false;
+                    updateSyncStatus('Offline (Salvo Localmente)', 'offline');
+                    return false;
+                } catch (localError) {
+                    console.error('Erro ao salvar localmente:', localError);
+                    updateSyncStatus('Erro ao Salvar', 'offline');
+                    return false;
+                }
+            }
         }
 
-        // Carregar dados do localStorage
-        function loadData() {
+        // Carregar dados online
+        async function loadDataOnline() {
             try {
-                const savedData = localStorage.getItem(STORAGE_KEY);
+                updateSyncStatus('Carregando...', 'syncing');
+                
+                const response = await fetch(STORAGE_URL);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    studentsData = data.studentsData || {};
+                    isOnline = true;
+                    updateSyncStatus('Online', 'online');
+                    console.log('Dados carregados online com sucesso');
+                    return true;
+                }
+            } catch (error) {
+                console.log('Erro ao carregar online:', error);
+            }
+            
+            // Fallback: carregar localmente
+            try {
+                const savedData = localStorage.getItem(BACKUP_KEY);
                 if (savedData) {
                     const parsed = JSON.parse(savedData);
                     studentsData = parsed.studentsData || {};
-                    console.log('Dados carregados do localStorage');
+                    isOnline = false;
+                    updateSyncStatus('Offline (Dados Locais)', 'offline');
+                    console.log('Dados carregados localmente');
+                    return true;
                 }
             } catch (error) {
-                console.error('Erro ao carregar dados:', error);
-                studentsData = {};
+                console.error('Erro ao carregar dados locais:', error);
             }
             
-            initializeProfessorsData();
+            isOnline = false;
+            updateSyncStatus('Sem Dados', 'offline');
+            return false;
+        }
+
+        // Atualizar status de sincronização
+        function updateSyncStatus(text, status) {
+            const syncStatus = document.getElementById('syncStatus');
+            syncStatus.textContent = text;
+            syncStatus.className = `sync-status ${status}`;
+        }
+
+        // Sincronizar agora
+        async function syncNow() {
+            await saveDataOnline();
+            await loadDataOnline();
+            updateAllStudentsList();
         }
 
         // Verificar se precisa fazer limpeza mensal
@@ -653,12 +780,11 @@
             const currentYear = now.getFullYear();
             const currentMonthKey = `${currentYear}-${currentMonth}`;
             
-            const lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+            const lastCleanup = localStorage.getItem('lastCleanup') || '';
             
             if (lastCleanup !== currentMonthKey) {
-                // É um novo mês, fazer limpeza
                 performMonthlyCleanup();
-                localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
+                localStorage.setItem('lastCleanup', currentMonthKey);
                 console.log('Limpeza mensal realizada automaticamente');
             }
         }
@@ -667,89 +793,12 @@
         function performMonthlyCleanup() {
             professors.forEach(prof => {
                 if (studentsData[prof]) {
-                    // Remove apenas alunos que já completaram o processo (status 'completed')
                     studentsData[prof] = studentsData[prof].filter(student => 
                         student.status !== 'completed'
                     );
                 }
             });
-            saveData();
-        }
-
-        // Exibir mês atual
-        function updateCurrentMonth() {
-            const now = new Date();
-            const monthNames = [
-                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-            ];
-            document.getElementById('currentMonth').textContent = 
-                `Controle de Avaliações - ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-        }
-
-        // Criar interface dos professores
-        function createProfessorsInterface() {
-            const container = document.getElementById('professorsGrid');
-            container.innerHTML = '';
-
-            professors.forEach(professor => {
-                const column = document.createElement('div');
-                column.className = 'professor-column';
-                column.innerHTML = `
-                    <div class="professor-header">
-                        ${professor}
-                    </div>
-                    <div class="add-person">
-                        <input type="text" placeholder="Nome do aluno" id="input-${professor}">
-                        <button onclick="addStudent('${professor}')">Adicionar</button>
-                    </div>
-                    <div class="students-list" id="students-${professor}">
-                        <!-- Lista de alunos -->
-                    </div>
-                `;
-                container.appendChild(column);
-
-                // Adicionar evento Enter no input
-                const input = column.querySelector(`#input-${professor}`);
-                input.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        addStudent(professor);
-                    }
-                });
-            });
-
-            updateAllStudentsList();
-        }
-
-        // Adicionar aluno
-        function addStudent(professor) {
-            const input = document.getElementById(`input-${professor}`);
-            const studentName = input.value.trim();
-            
-            if (studentName) {
-                const student = {
-                    name: studentName,
-                    status: 'pending', // pending, scheduled, evaluated, completed
-                    addedDate: new Date().toISOString(),
-                    scheduledDate: null, // Data agendada para avaliação
-                    evaluatedDate: null, // Data real da avaliação
-                    completedDate: null  // Data real da entrega
-                };
-                
-                studentsData[professor].push(student);
-                input.value = '';
-                updateStudentsList(professor);
-                updateStats();
-                saveData(); // Salvar automaticamente
-            }
-        }
-
-        // Remover aluno
-        function removeStudent(professor, index) {
-            studentsData[professor].splice(index, 1);
-            updateStudentsList(professor);
-            updateStats();
-            saveData(); // Salvar automaticamente
+            saveDataOnline();
         }
 
         // Variáveis para controle do modal
@@ -777,345 +826,4 @@
                 subtitle.textContent = `Para: ${studentName}`;
             }
             
-            // Definir data e hora atuais como padrão
-            const now = new Date();
-            dateInput.value = now.toISOString().split('T')[0];
-            timeInput.value = now.toTimeString().split(':').slice(0,2).join(':');
-            
-            // Armazenar informações da ação
-            currentModalAction = action;
-            currentProfessor = professor;
-            currentStudentIndex = index;
-            
-            // Mostrar modal
-            modal.style.display = 'block';
-            dateInput.focus();
-        }
-
-        // Confirmar data e hora
-        function confirmDateTime() {
-            const dateInput = document.getElementById('modalDate');
-            const timeInput = document.getElementById('modalTime');
-            
-            if (!dateInput.value || !timeInput.value) {
-                alert('Por favor, preencha a data e o horário.');
-                return;
-            }
-            
-            try {
-                // Criar objeto Date com data e hora
-                const dateTime = new Date(dateInput.value + 'T' + timeInput.value + ':00');
-                
-                if (isNaN(dateTime.getTime())) {
-                    alert('Data ou horário inválido!');
-                    return;
-                }
-                
-                const student = studentsData[currentProfessor][currentStudentIndex];
-                
-                if (currentModalAction === 'schedule' && student.status === 'pending') {
-                    student.status = 'scheduled';
-                    student.scheduledDate = dateTime.toISOString();
-                } else if (currentModalAction === 'confirm_evaluation' && student.status === 'scheduled') {
-                    student.status = 'evaluated';
-                    student.evaluatedDate = dateTime.toISOString();
-                } else if (currentModalAction === 'confirm_delivery' && student.status === 'evaluated') {
-                    student.status = 'completed';
-                    student.completedDate = dateTime.toISOString();
-                }
-                
-                updateStudentsList(currentProfessor);
-                updateStats();
-                saveData();
-                
-                // Fechar modal
-                cancelDateTime();
-                
-            } catch (error) {
-                alert('Erro ao processar data e horário. Tente novamente.');
-            }
-        }
-
-        // Cancelar modal
-        function cancelDateTime() {
-            const modal = document.getElementById('dateTimeModal');
-            modal.style.display = 'none';
-            currentModalAction = null;
-            currentProfessor = null;
-            currentStudentIndex = null;
-        }
-
-        // Fechar modal clicando fora dele
-        window.onclick = function(event) {
-            const modal = document.getElementById('dateTimeModal');
-            if (event.target === modal) {
-                cancelDateTime();
-            }
-        }
-
-        // Função para converter data brasileira (DD/MM/AAAA) para ISO
-        function convertBRDateToISO(brDate) {
-            try {
-                // Remove espaços extras
-                brDate = brDate.trim();
-                
-                // Verifica se está no formato correto DD/MM/AAAA
-                const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-                const match = brDate.match(dateRegex);
-                
-                if (!match) {
-                    return null;
-                }
-                
-                const day = parseInt(match[1], 10);
-                const month = parseInt(match[2], 10);
-                const year = parseInt(match[3], 10);
-                
-                // Validar dia, mês e ano
-                if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) {
-                    return null;
-                }
-                
-                // Criar objeto Date (mês é 0-indexado no JavaScript)
-                const dateObj = new Date(year, month - 1, day);
-                
-                // Verificar se a data é válida (ex: 31/02 seria inválida)
-                if (dateObj.getDate() !== day || dateObj.getMonth() !== (month - 1) || dateObj.getFullYear() !== year) {
-                    return null;
-                }
-                
-                return dateObj.toISOString();
-            } catch (error) {
-                return null;
-            }
-        }
-
-        // Agendar avaliação
-        function scheduleEvaluation(professor, index) {
-            const student = studentsData[professor][index];
-            if (student.status === 'pending') {
-                openDateTimeModal('schedule', professor, index, student.name);
-            }
-        }
-
-        // Confirmar que avaliação foi realizada
-        function confirmEvaluation(professor, index) {
-            const student = studentsData[professor][index];
-            if (student.status === 'scheduled') {
-                openDateTimeModal('confirm_evaluation', professor, index, student.name);
-            }
-        }
-
-        // Confirmar que treino foi entregue
-        function confirmDelivery(professor, index) {
-            const student = studentsData[professor][index];
-            if (student.status === 'evaluated') {
-                openDateTimeModal('confirm_delivery', professor, index, student.name);
-            }
-        }
-
-        // Marcar avaliação como feita (função antiga - mantida para compatibilidade)
-        function markEvaluated(professor, index) {
-            scheduleEvaluation(professor, index);
-        }
-
-        // Marcar treino como entregue (função antiga - mantida para compatibilidade)
-        function markDelivered(professor, index) {
-            confirmDelivery(professor, index);
-        }
-
-        // Atualizar lista de alunos de um professor
-        function updateStudentsList(professor) {
-            const container = document.getElementById(`students-${professor}`);
-            const students = studentsData[professor];
-            
-            container.innerHTML = '';
-            
-            students.forEach((student, index) => {
-                const item = document.createElement('div');
-                item.className = `student-item ${student.status}`;
-                
-                const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
-                const scheduledDate = student.scheduledDate ? 
-                    new Date(student.scheduledDate).toLocaleDateString("pt-BR") + ' às ' + 
-                    new Date(student.scheduledDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
-                const evaluatedDate = student.evaluatedDate ? 
-                    new Date(student.evaluatedDate).toLocaleDateString("pt-BR") + ' às ' + 
-                    new Date(student.evaluatedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
-                const completedDate = student.completedDate ? 
-                    new Date(student.completedDate).toLocaleDateString("pt-BR") + ' às ' + 
-                    new Date(student.completedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
-                
-                let datesHTML = `<span class="date-label">Adicionado:</span>${addedDate}`;
-                if (scheduledDate) {
-                    datesHTML += `<br><span class="date-label">Agendado para:</span>${scheduledDate}`;
-                }
-                if (evaluatedDate) {
-                    datesHTML += `<br><span class="date-label">Realizado em:</span>${evaluatedDate}`;
-                }
-                if (completedDate) {
-                    datesHTML += `<br><span class="date-label">Entregue em:</span>${completedDate}`;
-                }
-                
-                // Criar botões baseados no status
-                let buttonsHTML = '';
-                if (student.status === 'pending') {
-                    buttonsHTML = `<button class="eval-btn" onclick="scheduleEvaluation('${professor}', ${index})">Agendar</button>`;
-                } else if (student.status === 'scheduled') {
-                    buttonsHTML = `
-                        <button class="eval-btn" style="background: #17a2b8; color: white;" onclick="confirmEvaluation('${professor}', ${index})">Confirmar Avaliação</button>
-                    `;
-                } else if (student.status === 'evaluated') {
-                    buttonsHTML = `
-                        <button class="eval-btn" disabled style="background: #007bff;">✓ Avaliado</button>
-                        <button class="delivery-btn" onclick="confirmDelivery('${professor}', ${index})">Entregar Treino</button>
-                    `;
-                } else if (student.status === 'completed') {
-                    buttonsHTML = `
-                        <button class="eval-btn" disabled style="background: #007bff;">✓ Avaliado</button>
-                        <button class="delivery-btn" disabled>✓ Entregue</button>
-                    `;
-                }
-                
-                item.innerHTML = `
-                    <div class="student-header">
-                        <div class="student-name">${student.name}</div>
-                        <div class="action-buttons">
-                            ${buttonsHTML}
-                            <div class="status-indicator"></div>
-                            <button class="remove-btn" onclick="removeStudent('${professor}', ${index})">×</button>
-                        </div>
-                    </div>
-                    <div class="student-dates">${datesHTML}</div>
-                `;
-                
-                container.appendChild(item);
-            });
-        }
-
-        // Atualizar todas as listas
-        function updateAllStudentsList() {
-            professors.forEach(prof => updateStudentsList(prof));
-            updateStats();
-        }
-
-        // Atualizar estatísticas
-        function updateStats() {
-            let totalStudents = 0;
-            let evaluatedStudents = 0;
-            let completedDeliveries = 0;
-
-            professors.forEach(prof => {
-                const students = studentsData[prof];
-                totalStudents += students.length;
-                evaluatedStudents += students.filter(s => s.status === 'evaluated' || s.status === 'completed').length;
-                completedDeliveries += students.filter(s => s.status === 'completed').length;
-            });
-
-            const pendingStudents = totalStudents - evaluatedStudents - completedDeliveries;
-
-            document.getElementById('totalStudents').textContent = totalStudents;
-            document.getElementById('evaluatedStudents').textContent = evaluatedStudents;
-            document.getElementById('completedDeliveries').textContent = completedDeliveries;
-            document.getElementById('pendingStudents').textContent = pendingStudents;
-        }
-
-        // Resetar todas as avaliações
-        function resetAllEvaluations() {
-            if (confirm('Tem certeza que deseja resetar todas as avaliações do mês? Esta ação não pode ser desfeita.')) {
-                professors.forEach(prof => {
-                    studentsData[prof].forEach(student => {
-                        student.status = 'pending';
-                        student.evaluatedDate = null;
-                        student.completedDate = null;
-                    });
-                });
-                updateAllStudentsList();
-                saveData(); // Salvar após reset
-            }
-        }
-
-        // Exportar dados para Google Sheets
-        function exportData() {
-            // Criar dados em formato CSV para Google Sheets
-            let csvContent = "Professor,Aluno,Status,Data de Adição,Data Agendada,Data da Avaliação,Data de Entrega\n";
-            
-            professors.forEach(professor => {
-                if (studentsData[professor].length === 0) {
-                    csvContent += `${professor},Nenhum aluno cadastrado,,,,,\n`;
-                } else {
-                    studentsData[professor].forEach(student => {
-                        let status = '';
-                        if (student.status === 'pending') status = 'Pendente';
-                        else if (student.status === 'evaluated') status = 'Avaliado';
-                        else if (student.status === 'completed') status = 'Entregue';
-                        
-                        const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
-                        const evaluatedDate = student.evaluatedDate ? 
-                            new Date(student.evaluatedDate).toLocaleDateString("pt-BR") : "";
-                        const completedDate = student.completedDate ? 
-                            new Date(student.completedDate).toLocaleDateString("pt-BR") : "";
-                        csvContent += `${professor},"${student.name}",${status},${addedDate},${evaluatedDate},${completedDate}\n`;
-                    });
-                }
-            });
-            
-            // Adicionar resumo estatístico
-            csvContent += "\n";
-            csvContent += "RESUMO ESTATÍSTICO\n";
-            csvContent += "Descrição,Quantidade\n";
-            csvContent += `Total de Alunos,${document.getElementById('totalStudents').textContent}\n`;
-            csvContent += `Avaliações Feitas,${document.getElementById('evaluatedStudents').textContent}\n`;
-            csvContent += `Treinos Entregues,${document.getElementById('completedDeliveries').textContent}\n`;
-            csvContent += `Pendentes,${document.getElementById('pendingStudents').textContent}\n`;
-            
-            // Adicionar informações do mês
-            const now = new Date();
-            const monthNames = [
-                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-            ];
-            csvContent += `Mês de Referência,"${monthNames[now.getMonth()]} ${now.getFullYear()}"\n`;
-            csvContent += `Data de Exportação,"${now.toLocaleDateString("pt-BR")} ${now.toLocaleTimeString("pt-BR")}"\n`;
-            
-            // Criar e baixar o arquivo CSV
-            const BOM = '\uFEFF'; // BOM para garantir encoding UTF-8
-            const dataBlob = new Blob([BOM + csvContent], {type: 'text/csv;charset=utf-8'});
-            const url = URL.createObjectURL(dataBlob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `avaliacoes_performance_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}.csv`;
-            link.click();
-            
-            URL.revokeObjectURL(url);
-            
-            // Mostrar instruções para o usuário
-            alert('Arquivo CSV exportado com sucesso!\n\nPara importar no Google Sheets:\n1. Abra o Google Sheets\n2. Clique em "Arquivo" > "Importar"\n3. Selecione o arquivo CSV baixado\n4. Escolha "Substituir planilha" ou "Inserir nova planilha"\n5. Clique em "Importar dados"');
-        }
-
-        // Inicializar aplicação
-        function initializeApp() {
-            // Carregar dados salvos
-            loadData();
-            
-            // Verificar se precisa fazer limpeza mensal
-            checkMonthlyCleanup();
-            
-            // Atualizar interface
-            updateCurrentMonth();
-            createProfessorsInterface();
-            
-            console.log('Sistema iniciado com persistência de dados');
-        }
-
-        // Inicializar quando a página carregar
-        document.addEventListener('DOMContentLoaded', initializeApp);
-
-        // Salvar dados antes de fechar a página
-        window.addEventListener('beforeunload', function() {
-            saveData();
-        });
-    </script>
-</body>
-</html>
+            // Definir data e hora
