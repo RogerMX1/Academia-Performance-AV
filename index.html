@@ -589,15 +589,66 @@
             saveData(); // Salvar automaticamente
         }
 
+        // Função para converter data brasileira (DD/MM/AAAA) para ISO
+        function convertBRDateToISO(brDate) {
+            try {
+                // Remove espaços extras
+                brDate = brDate.trim();
+                
+                // Verifica se está no formato correto DD/MM/AAAA
+                const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+                const match = brDate.match(dateRegex);
+                
+                if (!match) {
+                    return null;
+                }
+                
+                const day = parseInt(match[1], 10);
+                const month = parseInt(match[2], 10);
+                const year = parseInt(match[3], 10);
+                
+                // Validar dia, mês e ano
+                if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) {
+                    return null;
+                }
+                
+                // Criar objeto Date (mês é 0-indexado no JavaScript)
+                const dateObj = new Date(year, month - 1, day);
+                
+                // Verificar se a data é válida (ex: 31/02 seria inválida)
+                if (dateObj.getDate() !== day || dateObj.getMonth() !== (month - 1) || dateObj.getFullYear() !== year) {
+                    return null;
+                }
+                
+                return dateObj.toISOString();
+            } catch (error) {
+                return null;
+            }
+        }
+
         // Marcar avaliação como feita
         function markEvaluated(professor, index) {
             const student = studentsData[professor][index];
             if (student.status === 'pending') {
-                student.status = 'evaluated';
-                student.evaluatedDate = new Date().toISOString();
-                updateStudentsList(professor);
-                updateStats();
-                saveData(); // Salvar automaticamente
+                // Solicitar data da avaliação com formato brasileiro
+                const today = new Date();
+                const todayBR = today.toLocaleDateString('pt-BR');
+                const evaluationDate = prompt(`Digite a data da avaliação para ${student.name}:\n(Formato: DD/MM/AAAA)`, todayBR);
+                
+                if (evaluationDate) {
+                    // Converter data brasileira para ISO
+                    const dateISO = convertBRDateToISO(evaluationDate);
+                    if (dateISO) {
+                        student.status = 'evaluated';
+                        student.evaluatedDate = dateISO;
+                        updateStudentsList(professor);
+                        updateStats();
+                        saveData(); // Salvar automaticamente
+                    } else {
+                        alert('Data inválida! Use o formato DD/MM/AAAA (ex: 15/08/2025)');
+                        return;
+                    }
+                }
             }
         }
 
@@ -605,11 +656,25 @@
         function markDelivered(professor, index) {
             const student = studentsData[professor][index];
             if (student.status === 'evaluated') {
-                student.status = 'completed';
-                student.completedDate = new Date().toISOString();
-                updateStudentsList(professor);
-                updateStats();
-                saveData(); // Salvar automaticamente
+                // Solicitar data da entrega com formato brasileiro
+                const today = new Date();
+                const todayBR = today.toLocaleDateString('pt-BR');
+                const deliveryDate = prompt(`Digite a data de entrega do treino para ${student.name}:\n(Formato: DD/MM/AAAA)`, todayBR);
+                
+                if (deliveryDate) {
+                    // Converter data brasileira para ISO
+                    const dateISO = convertBRDateToISO(deliveryDate);
+                    if (dateISO) {
+                        student.status = 'completed';
+                        student.completedDate = dateISO;
+                        updateStudentsList(professor);
+                        updateStats();
+                        saveData(); // Salvar automaticamente
+                    } else {
+                        alert('Data inválida! Use o formato DD/MM/AAAA (ex: 15/08/2025)');
+                        return;
+                    }
+                }
             }
         }
 
