@@ -123,7 +123,7 @@
 
         .professors-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 25px;
             margin-bottom: 30px;
         }
@@ -201,11 +201,11 @@
             display: flex;
             justify-content: between;
             align-items: center;
-            padding: 12px;
-            margin-bottom: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
             background: white;
             border-radius: 8px;
-            border: 1px solid #dee2e6;
+            border: 2px solid #dee2e6;
             transition: all 0.3s ease;
             cursor: pointer;
             flex-direction: column;
@@ -216,27 +216,33 @@
             transform: translateX(5px);
         }
 
+        /* Status colors */
+        .student-item.pending {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .student-item.scheduled {
+            border-color: #17a2b8;
+            background: #f0f9ff;
+        }
+
+        .student-item.evaluated {
+            border-color: #ffc107;
+            background: #fffbf0;
+        }
+
         .student-item.completed {
-            background: #d4edda;
-            border-color: #c3e6cb;
-            color: #155724;
+            border-color: #28a745;
+            background: #f0fff4;
         }
 
         .student-name {
             flex: 1;
-            font-weight: 500;
+            font-weight: 600;
             color: #000000;
             width: 100%;
-        }
-
-        .student-item.evaluated .student-name {
-            color: #856404;
-            font-weight: bold;
-        }
-
-        .student-item.completed .student-name {
-            color: #155724;
-            font-weight: bold;
+            font-size: 1.1em;
         }
 
         .student-header {
@@ -249,16 +255,9 @@
         .student-dates {
             font-size: 12px;
             color: #6c757d;
-            margin-top: 5px;
-            line-height: 1.3;
-        }
-
-        .student-item.evaluated .student-dates {
-            color: #856404;
-        }
-
-        .student-item.completed .student-dates {
-            color: #0f5132;
+            margin-top: 8px;
+            line-height: 1.4;
+            width: 100%;
         }
 
         .date-label {
@@ -266,58 +265,87 @@
             margin-right: 5px;
         }
 
+        .scheduled-date {
+            color: #17a2b8;
+            font-weight: bold;
+        }
+
+        .evaluated-date {
+            color: #856404;
+            font-weight: bold;
+        }
+
+        .completed-date {
+            color: #155724;
+            font-weight: bold;
+        }
+
         .action-buttons {
             display: flex;
             gap: 5px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
-        .eval-btn, .delivery-btn {
-            padding: 4px 8px;
+        .btn {
+            padding: 6px 12px;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
             font-size: 11px;
             font-weight: bold;
             transition: all 0.3s ease;
+            text-transform: uppercase;
         }
 
-        .eval-btn {
+        .btn-schedule {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-schedule:hover {
+            background: #138496;
+        }
+
+        .btn-confirm-eval {
             background: #ffc107;
             color: #000;
         }
 
-        .eval-btn:hover {
+        .btn-confirm-eval:hover {
             background: #e0a800;
         }
 
-        .eval-btn:disabled {
-            background: #6c757d;
-            color: #fff;
-            cursor: not-allowed;
-        }
-
-        .delivery-btn {
+        .btn-confirm-delivery {
             background: #28a745;
-            color: #fff;
+            color: white;
         }
 
-        .delivery-btn:hover {
+        .btn-confirm-delivery:hover {
             background: #218838;
         }
 
-        .delivery-btn:disabled {
+        .btn:disabled {
             background: #6c757d;
+            color: #fff;
             cursor: not-allowed;
+            opacity: 0.6;
         }
 
         .status-indicator {
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: #dc3545;
             margin-left: 10px;
             transition: all 0.3s ease;
+        }
+
+        .student-item.pending .status-indicator {
+            background: #dc3545;
+        }
+
+        .student-item.scheduled .status-indicator {
+            background: #17a2b8;
         }
 
         .student-item.evaluated .status-indicator {
@@ -544,6 +572,28 @@
             to { transform: translateY(0); opacity: 1; }
         }
 
+        .status-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
         @media (max-width: 768px) {
             .professors-grid {
                 grid-template-columns: 1fr;
@@ -566,6 +616,12 @@
             
             .header {
                 padding: 20px 15px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 5px;
+                align-items: stretch;
             }
         }
     </style>
@@ -593,6 +649,10 @@
                 <div class="stat-label">Total de Alunos</div>
             </div>
             <div class="stat-item">
+                <span class="stat-number" id="scheduledStudents">0</span>
+                <div class="stat-label">Agendamentos</div>
+            </div>
+            <div class="stat-item">
                 <span class="stat-number" id="evaluatedStudents">0</span>
                 <div class="stat-label">Avaliações Feitas</div>
             </div>
@@ -600,18 +660,33 @@
                 <span class="stat-number" id="completedDeliveries">0</span>
                 <div class="stat-label">Treinos Entregues</div>
             </div>
-            <div class="stat-item">
-                <span class="stat-number" id="pendingStudents">0</span>
-                <div class="stat-label">Pendentes</div>
-            </div>
         </div>
 
         <div class="table-container">
             <div class="month-display" id="currentMonth"></div>
             
+            <div class="status-legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #dc3545;"></div>
+                    <span>Pendente</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #17a2b8;"></div>
+                    <span>Agendado</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #ffc107;"></div>
+                    <span>Avaliado</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #28a745;"></div>
+                    <span>Concluído</span>
+                </div>
+            </div>
+            
             <div class="auto-clean-info">
-                🌐 <strong>Sistema Online:</strong> Os dados são sincronizados automaticamente entre todos os dispositivos. 
-                A cada virada de mês, as avaliações concluídas são automaticamente arquivadas.
+                🌐 <strong>Sistema 3 Etapas:</strong> 1) Agendar avaliação → 2) Confirmar que foi realizada → 3) Confirmar entrega do treino. 
+                Dados sincronizados automaticamente entre dispositivos.
             </div>
             
             <div class="professors-grid" id="professorsGrid">
@@ -625,7 +700,7 @@
         </div>
 
         <div style="text-align: center; padding: 15px; background: #f8f9fa; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 14px; font-style: italic;">
-            BY Roger Medeiros Xavier | Sistema Online v2.0
+            BY Roger Medeiros Xavier | Sistema Online v3.0 - 3 Etapas
         </div>
     </div>
 
@@ -633,7 +708,7 @@
     <div id="dateTimeModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">Marcar Avaliação</h3>
+                <h3 id="modalTitle">Agendar Avaliação</h3>
                 <p id="modalSubtitle">Digite a data e horário</p>
             </div>
             
@@ -654,70 +729,22 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-database-compat.min.js"></script>
-
     <script>
-        // CONFIGURAÇÃO DO FIREBASE
-        // SUBSTITUA ESSAS CONFIGURAÇÕES PELAS SUAS DO FIREBASE
-        const firebaseConfig = {
-            apiKey: "SUA_API_KEY",
-            authDomain: "seu-projeto.firebaseapp.com",
-            databaseURL: "https://seu-projeto-default-rtdb.firebaseio.com/",
-            projectId: "seu-projeto",
-            storageBucket: "seu-projeto.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "sua-app-id"
-        };
-
-        // Inicializar Firebase
-        let app, database, isConnected = false;
-        
-        try {
-            app = firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
-            
-            // Monitorar status de conexão
-            const connectedRef = database.ref(".info/connected");
-            connectedRef.on("value", (snap) => {
-                isConnected = snap.val() === true;
-                updateConnectionStatus();
-            });
-            
-        } catch (error) {
-            console.warn('Firebase não configurado, usando modo offline:', error);
-            // Fallback para localStorage quando Firebase não estiver configurado
-            isConnected = false;
-            setTimeout(() => {
-                updateConnectionStatus();
-                hideLoadingOverlay();
-                initializeApp();
-            }, 1000);
-        }
-
+        // DADOS LOCAIS (sem Firebase para demonstração)
         const professors = ['Robson', 'Roger', 'Maicon', 'Roberto', 'Naldon', 'Helízia', 'Danielle'];
         let studentsData = {};
         let isInitialized = false;
+        let isConnected = true; // Simulando conexão online
 
-        // Chaves para fallback local
+        // Chaves para localStorage
         const STORAGE_KEY = 'academiaPerformanceData';
         const LAST_CLEANUP_KEY = 'academiaPerformanceLastCleanup';
 
         // Atualizar status de conexão
         function updateConnectionStatus() {
             const statusEl = document.getElementById('connectionStatus');
-            const buttons = document.querySelectorAll('.add-person button, .controls button');
-            
-            if (isConnected && database) {
-                statusEl.textContent = '🟢 Online';
-                statusEl.className = 'connection-status connected';
-                buttons.forEach(btn => btn.disabled = false);
-            } else {
-                statusEl.textContent = '🔴 Offline';
-                statusEl.className = 'connection-status disconnected';
-                buttons.forEach(btn => btn.disabled = false); // Permite uso offline
-            }
+            statusEl.textContent = '🟢 Online';
+            statusEl.className = 'connection-status connected';
         }
 
         // Mostrar/ocultar overlay de carregamento
@@ -738,53 +765,19 @@
             });
         }
 
-        // Salvar dados (Firebase ou localStorage)
+        // Salvar dados
         async function saveData() {
             const dataToSave = {
                 studentsData: studentsData,
                 timestamp: new Date().toISOString()
             };
 
-            if (isConnected && database) {
-                try {
-                    await database.ref('academiaPerformance').set(dataToSave);
-                    console.log('Dados salvos no Firebase');
-                } catch (error) {
-                    console.error('Erro ao salvar no Firebase:', error);
-                    // Fallback para localStorage
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-                }
-            } else {
-                // Modo offline
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-                console.log('Dados salvos localmente');
-            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+            console.log('Dados salvos localmente');
         }
 
-        // Carregar dados (Firebase ou localStorage)
+        // Carregar dados
         async function loadData() {
-            if (isConnected && database) {
-                try {
-                    const snapshot = await database.ref('academiaPerformance').once('value');
-                    const data = snapshot.val();
-                    
-                    if (data && data.studentsData) {
-                        studentsData = data.studentsData;
-                        console.log('Dados carregados do Firebase');
-                    }
-                } catch (error) {
-                    console.error('Erro ao carregar do Firebase:', error);
-                    loadLocalData();
-                }
-            } else {
-                loadLocalData();
-            }
-            
-            initializeProfessorsData();
-        }
-
-        // Carregar dados locais
-        function loadLocalData() {
             try {
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 if (savedData) {
@@ -796,22 +789,8 @@
                 console.error('Erro ao carregar dados locais:', error);
                 studentsData = {};
             }
-        }
-
-        // Escutar mudanças em tempo real
-        function setupRealtimeListener() {
-            if (database && isConnected) {
-                database.ref('academiaPerformance').on('value', (snapshot) => {
-                    if (!isInitialized) return; // Evita loop na inicialização
-                    
-                    const data = snapshot.val();
-                    if (data && data.studentsData) {
-                        studentsData = data.studentsData;
-                        updateAllStudentsList();
-                        console.log('Dados atualizados em tempo real');
-                    }
-                });
-            }
+            
+            initializeProfessorsData();
         }
 
         // Verificar e realizar limpeza mensal
@@ -821,33 +800,11 @@
             const currentYear = now.getFullYear();
             const currentMonthKey = `${currentYear}-${currentMonth}`;
             
-            let lastCleanup;
-            
-            if (isConnected && database) {
-                try {
-                    const snapshot = await database.ref('lastCleanup').once('value');
-                    lastCleanup = snapshot.val();
-                } catch (error) {
-                    lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
-                }
-            } else {
-                lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
-            }
+            const lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
             
             if (lastCleanup !== currentMonthKey) {
                 await performMonthlyCleanup();
-                
-                // Salvar data da última limpeza
-                if (isConnected && database) {
-                    try {
-                        await database.ref('lastCleanup').set(currentMonthKey);
-                    } catch (error) {
-                        localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
-                    }
-                } else {
-                    localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
-                }
-                
+                localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
                 console.log('Limpeza mensal realizada automaticamente');
             }
         }
@@ -917,8 +874,9 @@
             if (studentName) {
                 const student = {
                     name: studentName,
-                    status: 'pending',
+                    status: 'pending', // pending -> scheduled -> evaluated -> completed
                     addedDate: new Date().toISOString(),
+                    scheduledDate: null,
                     evaluatedDate: null,
                     completedDate: null
                 };
@@ -954,12 +912,15 @@
             const dateInput = document.getElementById('modalDate');
             const timeInput = document.getElementById('modalTime');
             
-            if (action === 'evaluate') {
-                title.textContent = 'Marcar Avaliação';
+            if (action === 'schedule') {
+                title.textContent = 'Agendar Avaliação';
                 subtitle.textContent = `Para: ${studentName}`;
-            } else if (action === 'deliver') {
-                title.textContent = 'Marcar Entrega';
-                subtitle.textContent = `Treino para: ${studentName}`;
+            } else if (action === 'confirm-eval') {
+                title.textContent = 'Confirmar Avaliação Realizada';
+                subtitle.textContent = `Para: ${studentName}`;
+            } else if (action === 'confirm-delivery') {
+                title.textContent = 'Confirmar Entrega do Treino';
+                subtitle.textContent = `Para: ${studentName}`;
             }
             
             const now = new Date();
@@ -994,10 +955,13 @@
                 
                 const student = studentsData[currentProfessor][currentStudentIndex];
                 
-                if (currentModalAction === 'evaluate' && student.status === 'pending') {
+                if (currentModalAction === 'schedule' && student.status === 'pending') {
+                    student.status = 'scheduled';
+                    student.scheduledDate = dateTime.toISOString();
+                } else if (currentModalAction === 'confirm-eval' && student.status === 'scheduled') {
                     student.status = 'evaluated';
                     student.evaluatedDate = dateTime.toISOString();
-                } else if (currentModalAction === 'deliver' && student.status === 'evaluated') {
+                } else if (currentModalAction === 'confirm-delivery' && student.status === 'evaluated') {
                     student.status = 'completed';
                     student.completedDate = dateTime.toISOString();
                 }
@@ -1030,19 +994,29 @@
             }
         }
 
-        // Marcar avaliação como feita
-        function markEvaluated(professor, index) {
+        // FUNÇÕES DAS 3 ETAPAS
+
+        // 1. Agendar avaliação
+        function scheduleEvaluation(professor, index) {
             const student = studentsData[professor][index];
             if (student.status === 'pending') {
-                openDateTimeModal('evaluate', professor, index, student.name);
+                openDateTimeModal('schedule', professor, index, student.name);
             }
         }
 
-        // Marcar treino como entregue
-        function markDelivered(professor, index) {
+        // 2. Confirmar que a avaliação foi realizada
+        function confirmEvaluation(professor, index) {
+            const student = studentsData[professor][index];
+            if (student.status === 'scheduled') {
+                openDateTimeModal('confirm-eval', professor, index, student.name);
+            }
+        }
+
+        // 3. Confirmar que o treino foi entregue
+        function confirmDelivery(professor, index) {
             const student = studentsData[professor][index];
             if (student.status === 'evaluated') {
-                openDateTimeModal('deliver', professor, index, student.name);
+                openDateTimeModal('confirm-delivery', professor, index, student.name);
             }
         }
 
@@ -1057,34 +1031,57 @@
                 const item = document.createElement('div');
                 item.className = `student-item ${student.status}`;
                 
+                // Formatação das datas
                 const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
+                
+                const scheduledDate = student.scheduledDate ? 
+                    new Date(student.scheduledDate).toLocaleDateString("pt-BR") + ' às ' + 
+                    new Date(student.scheduledDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
+                
                 const evaluatedDate = student.evaluatedDate ? 
                     new Date(student.evaluatedDate).toLocaleDateString("pt-BR") + ' às ' + 
                     new Date(student.evaluatedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
+                
                 const completedDate = student.completedDate ? 
                     new Date(student.completedDate).toLocaleDateString("pt-BR") + ' às ' + 
                     new Date(student.completedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
                 
+                // Montar HTML das datas
                 let datesHTML = `<span class="date-label">Adicionado:</span>${addedDate}`;
-                if (evaluatedDate) {
-                    datesHTML += `<br><span class="date-label">Avaliação:</span>${evaluatedDate}`;
-                }
-                if (completedDate) {
-                    datesHTML += `<br><span class="date-label">Entregue:</span>${completedDate}`;
+                
+                if (scheduledDate) {
+                    datesHTML += `<br><span class="date-label">📅 Agendado para:</span><span class="scheduled-date">${scheduledDate}</span>`;
                 }
                 
+                if (evaluatedDate) {
+                    datesHTML += `<br><span class="date-label">✅ Avaliado em:</span><span class="evaluated-date">${evaluatedDate}</span>`;
+                }
+                
+                if (completedDate) {
+                    datesHTML += `<br><span class="date-label">📋 Entregue em:</span><span class="completed-date">${completedDate}</span>`;
+                }
+                
+                // Botões baseados no status
                 let buttonsHTML = '';
+                
                 if (student.status === 'pending') {
-                    buttonsHTML = `<button class="eval-btn" onclick="markEvaluated('${professor}', ${index})">Avaliar</button>`;
+                    buttonsHTML = `<button class="btn btn-schedule" onclick="scheduleEvaluation('${professor}', ${index})">📅 Agendar</button>`;
+                } else if (student.status === 'scheduled') {
+                    buttonsHTML = `
+                        <button class="btn btn-schedule" disabled>📅 Agendado</button>
+                        <button class="btn btn-confirm-eval" onclick="confirmEvaluation('${professor}', ${index})">✅ Confirmar Avaliação</button>
+                    `;
                 } else if (student.status === 'evaluated') {
                     buttonsHTML = `
-                        <button class="eval-btn" disabled>✓ Avaliado</button>
-                        <button class="delivery-btn" onclick="markDelivered('${professor}', ${index})">Entregar</button>
+                        <button class="btn btn-schedule" disabled>📅 Agendado</button>
+                        <button class="btn btn-confirm-eval" disabled>✅ Avaliado</button>
+                        <button class="btn btn-confirm-delivery" onclick="confirmDelivery('${professor}', ${index})">📋 Confirmar Entrega</button>
                     `;
                 } else if (student.status === 'completed') {
                     buttonsHTML = `
-                        <button class="eval-btn" disabled>✓ Avaliado</button>
-                        <button class="delivery-btn" disabled>✓ Entregue</button>
+                        <button class="btn btn-schedule" disabled>📅 Agendado</button>
+                        <button class="btn btn-confirm-eval" disabled>✅ Avaliado</button>
+                        <button class="btn btn-confirm-delivery" disabled>📋 Entregue</button>
                     `;
                 }
                 
@@ -1113,22 +1110,22 @@
         // Atualizar estatísticas
         function updateStats() {
             let totalStudents = 0;
+            let scheduledStudents = 0;
             let evaluatedStudents = 0;
             let completedDeliveries = 0;
 
             professors.forEach(prof => {
                 const students = studentsData[prof];
                 totalStudents += students.length;
-                evaluatedStudents += students.filter(s => s.status === 'evaluated' || s.status === 'completed').length;
+                scheduledStudents += students.filter(s => s.status === 'scheduled').length;
+                evaluatedStudents += students.filter(s => s.status === 'evaluated').length;
                 completedDeliveries += students.filter(s => s.status === 'completed').length;
             });
 
-            const pendingStudents = totalStudents - evaluatedStudents - completedDeliveries;
-
             document.getElementById('totalStudents').textContent = totalStudents;
+            document.getElementById('scheduledStudents').textContent = scheduledStudents;
             document.getElementById('evaluatedStudents').textContent = evaluatedStudents;
             document.getElementById('completedDeliveries').textContent = completedDeliveries;
-            document.getElementById('pendingStudents').textContent = pendingStudents;
         }
 
         // Resetar todas as avaliações
@@ -1137,6 +1134,7 @@
                 professors.forEach(prof => {
                     studentsData[prof].forEach(student => {
                         student.status = 'pending';
+                        student.scheduledDate = null;
                         student.evaluatedDate = null;
                         student.completedDate = null;
                     });
@@ -1148,7 +1146,7 @@
 
         // Exportar dados
         function exportData() {
-            let csvContent = "Professor,Aluno,Status,Data de Adição,Data da Avaliação,Data de Entrega\n";
+            let csvContent = "Professor,Aluno,Status,Data de Adição,Data Agendada,Data da Avaliação,Data de Entrega\n";
             
             professors.forEach(professor => {
                 if (studentsData[professor].length === 0) {
@@ -1157,15 +1155,22 @@
                     studentsData[professor].forEach(student => {
                         let status = '';
                         if (student.status === 'pending') status = 'Pendente';
+                        else if (student.status === 'scheduled') status = 'Agendado';
                         else if (student.status === 'evaluated') status = 'Avaliado';
-                        else if (student.status === 'completed') status = 'Entregue';
+                        else if (student.status === 'completed') status = 'Concluído';
                         
                         const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
+                        const scheduledDate = student.scheduledDate ? 
+                            new Date(student.scheduledDate).toLocaleDateString("pt-BR") + ' ' + 
+                            new Date(student.scheduledDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : "";
                         const evaluatedDate = student.evaluatedDate ? 
-                            new Date(student.evaluatedDate).toLocaleDateString("pt-BR") : "";
+                            new Date(student.evaluatedDate).toLocaleDateString("pt-BR") + ' ' + 
+                            new Date(student.evaluatedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : "";
                         const completedDate = student.completedDate ? 
-                            new Date(student.completedDate).toLocaleDateString("pt-BR") : "";
-                        csvContent += `${professor},"${student.name}",${status},${addedDate},${evaluatedDate},${completedDate}\n`;
+                            new Date(student.completedDate).toLocaleDateString("pt-BR") + ' ' + 
+                            new Date(student.completedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : "";
+                            
+                        csvContent += `${professor},"${student.name}",${status},${addedDate},"${scheduledDate}","${evaluatedDate}","${completedDate}"\n`;
                     });
                 }
             });
@@ -1175,9 +1180,9 @@
             csvContent += "RESUMO ESTATÍSTICO\n";
             csvContent += "Descrição,Quantidade\n";
             csvContent += `Total de Alunos,${document.getElementById('totalStudents').textContent}\n`;
+            csvContent += `Agendamentos,${document.getElementById('scheduledStudents').textContent}\n`;
             csvContent += `Avaliações Feitas,${document.getElementById('evaluatedStudents').textContent}\n`;
             csvContent += `Treinos Entregues,${document.getElementById('completedDeliveries').textContent}\n`;
-            csvContent += `Pendentes,${document.getElementById('pendingStudents').textContent}\n`;
             
             const now = new Date();
             const monthNames = [
@@ -1193,7 +1198,7 @@
             
             const link = document.createElement('a');
             link.href = url;
-            link.download = `avaliacoes_performance_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}.csv`;
+            link.download = `avaliacoes_performance_3etapas_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}.csv`;
             link.click();
             
             URL.revokeObjectURL(url);
@@ -1211,11 +1216,9 @@
                 await checkMonthlyCleanup();
                 
                 // Atualizar interface
+                updateConnectionStatus();
                 updateCurrentMonth();
                 createProfessorsInterface();
-                
-                // Configurar listener em tempo real
-                setupRealtimeListener();
                 
                 isInitialized = true;
                 
@@ -1228,15 +1231,8 @@
             }
         }
 
-        // Inicializar quando Firebase estiver pronto ou após timeout
-        if (database) {
-            database.ref('.info/connected').once('value').then(() => {
-                initializeApp();
-            });
-        } else {
-            // Modo offline ou Firebase não configurado
-            setTimeout(initializeApp, 1000);
-        }
+        // Inicializar aplicação
+        setTimeout(initializeApp, 1000);
 
         // Salvar dados antes de fechar a página
         window.addEventListener('beforeunload', async function() {
@@ -1245,13 +1241,11 @@
             }
         });
 
-        // Sincronizar quando voltar online
-        window.addEventListener('online', function() {
-            console.log('Conexão restaurada');
-            if (isInitialized) {
-                loadData().then(() => {
-                    updateAllStudentsList();
-                });
+        // Atalhos do teclado
+        document.addEventListener('keydown', function(e) {
+            // ESC para fechar modal
+            if (e.key === 'Escape') {
+                cancelDateTime();
             }
         });
     </script>
