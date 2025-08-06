@@ -627,6 +627,26 @@
     </style>
 </head>
 <body>
+    <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBHq87y9chjWaWxp9nS9lv8Y3_Ik7zu5Ok",
+    authDomain: "academia-performance-16371.firebaseapp.com",
+    databaseURL: "https://academia-performance-16371-default-rtdb.firebaseio.com",
+    projectId: "academia-performance-16371",
+    storageBucket: "academia-performance-16371.firebasestorage.app",
+    messagingSenderId: "973421564338",
+    appId: "1:973421564338:web:099bcf503d677280f514ab"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
@@ -1285,3 +1305,4 @@
     </script>
 </body>
 </html>
+
