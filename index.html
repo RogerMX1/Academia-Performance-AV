@@ -65,28 +65,30 @@
             color: #FFFFFF;
         }
 
-        .sync-status {
+        .connection-status {
             position: absolute;
-            top: 10px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.1);
+            top: 15px;
+            right: 15px;
             padding: 8px 15px;
             border-radius: 20px;
             font-size: 12px;
-            color: #FFD700;
-            border: 1px solid rgba(255, 215, 0, 0.3);
+            font-weight: bold;
+            transition: all 0.3s ease;
         }
 
-        .sync-status.online {
-            background: rgba(40, 167, 69, 0.2);
-            color: #28a745;
-            border-color: rgba(40, 167, 69, 0.3);
+        .connection-status.connected {
+            background: #28a745;
+            color: white;
         }
 
-        .sync-status.offline {
-            background: rgba(220, 53, 69, 0.2);
-            color: #dc3545;
-            border-color: rgba(220, 53, 69, 0.3);
+        .connection-status.disconnected {
+            background: #dc3545;
+            color: white;
+        }
+
+        .connection-status.connecting {
+            background: #ffc107;
+            color: #000;
         }
 
         .stats {
@@ -186,6 +188,11 @@
             background: #E6C200;
         }
 
+        .add-person button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
         .students-list {
             min-height: 200px;
         }
@@ -209,18 +216,6 @@
             transform: translateX(5px);
         }
 
-        .student-item.scheduled {
-            background: #fff3cd;
-            border-color: #ffeaa7;
-            color: #856404;
-        }
-
-        .student-item.evaluated {
-            background: #cce5ff;
-            border-color: #74b9ff;
-            color: #0056b3;
-        }
-
         .student-item.completed {
             background: #d4edda;
             border-color: #c3e6cb;
@@ -234,13 +229,8 @@
             width: 100%;
         }
 
-        .student-item.scheduled .student-name {
-            color: #856404;
-            font-weight: bold;
-        }
-
         .student-item.evaluated .student-name {
-            color: #0056b3;
+            color: #856404;
             font-weight: bold;
         }
 
@@ -263,12 +253,8 @@
             line-height: 1.3;
         }
 
-        .student-item.scheduled .student-dates {
-            color: #856404;
-        }
-
         .student-item.evaluated .student-dates {
-            color: #0056b3;
+            color: #856404;
         }
 
         .student-item.completed .student-dates {
@@ -334,12 +320,8 @@
             transition: all 0.3s ease;
         }
 
-        .student-item.scheduled .status-indicator {
-            background: #ffc107;
-        }
-
         .student-item.evaluated .status-indicator {
-            background: #007bff;
+            background: #ffc107;
         }
 
         .student-item.completed .status-indicator {
@@ -393,6 +375,14 @@
             transform: translateY(-2px);
         }
 
+        .controls button:disabled {
+            background: #ccc;
+            color: #666;
+            border-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .month-display {
             font-size: 1.2em;
             color: #000000;
@@ -412,15 +402,34 @@
             font-size: 14px;
         }
 
-        .cloud-info {
-            background: #f0f8f0;
-            border: 1px solid #28a745;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            text-align: center;
-            color: #155724;
-            font-size: 14px;
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: white;
+            font-size: 18px;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FFD700;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         /* Modal para entrada de data e hora */
@@ -562,9 +571,15 @@
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div>Conectando ao sistema...</div>
+    </div>
+
     <div class="container">
         <div class="header">
-            <div class="sync-status" id="syncStatus">🔄 Sincronizando...</div>
+            <div class="connection-status" id="connectionStatus">Conectando...</div>
             <div class="logo-container">
                 <img src="https://i.ibb.co/9m4ypbXf/Imagem-do-Whats-App-de-2025-08-03-s-20-43-13-d5929410.jpg" alt="Academia Performance Logo" class="logo-image">
             </div>
@@ -594,13 +609,9 @@
         <div class="table-container">
             <div class="month-display" id="currentMonth"></div>
             
-            <div class="cloud-info">
-                ☁️ Sistema sincronizado online - Todos os funcionários veem os mesmos dados em tempo real!
-            </div>
-            
             <div class="auto-clean-info">
-                ℹ️ Os dados são salvos automaticamente na nuvem e permanecem durante todo o mês. 
-                A cada virada de mês, as avaliações já concluídas são automaticamente removidas.
+                🌐 <strong>Sistema Online:</strong> Os dados são sincronizados automaticamente entre todos os dispositivos. 
+                A cada virada de mês, as avaliações concluídas são automaticamente arquivadas.
             </div>
             
             <div class="professors-grid" id="professorsGrid">
@@ -609,13 +620,12 @@
         </div>
 
         <div class="controls">
-            <button onclick="resetAllEvaluations()">Resetar Avaliações do Mês</button>
-            <button onclick="exportData()">Exportar Dados</button>
-            <button onclick="syncNow()">Sincronizar Agora</button>
+            <button onclick="resetAllEvaluations()" id="resetBtn">Resetar Avaliações do Mês</button>
+            <button onclick="exportData()" id="exportBtn">Exportar Dados</button>
         </div>
 
         <div style="text-align: center; padding: 15px; background: #f8f9fa; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 14px; font-style: italic;">
-            BY Roger Medeiros Xavier
+            BY Roger Medeiros Xavier | Sistema Online v2.0
         </div>
     </div>
 
@@ -644,14 +654,80 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-database-compat.min.js"></script>
+
     <script>
+        // CONFIGURAÇÃO DO FIREBASE
+        // SUBSTITUA ESSAS CONFIGURAÇÕES PELAS SUAS DO FIREBASE
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY",
+            authDomain: "seu-projeto.firebaseapp.com",
+            databaseURL: "https://seu-projeto-default-rtdb.firebaseio.com/",
+            projectId: "seu-projeto",
+            storageBucket: "seu-projeto.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "sua-app-id"
+        };
+
+        // Inicializar Firebase
+        let app, database, isConnected = false;
+        
+        try {
+            app = firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            
+            // Monitorar status de conexão
+            const connectedRef = database.ref(".info/connected");
+            connectedRef.on("value", (snap) => {
+                isConnected = snap.val() === true;
+                updateConnectionStatus();
+            });
+            
+        } catch (error) {
+            console.warn('Firebase não configurado, usando modo offline:', error);
+            // Fallback para localStorage quando Firebase não estiver configurado
+            isConnected = false;
+            setTimeout(() => {
+                updateConnectionStatus();
+                hideLoadingOverlay();
+                initializeApp();
+            }, 1000);
+        }
+
         const professors = ['Robson', 'Roger', 'Maicon', 'Roberto', 'Naldon', 'Helízia', 'Danielle'];
         let studentsData = {};
-        let isOnline = false;
+        let isInitialized = false;
 
-        // Configuração do armazenamento online (usando uma API gratuita como JSONBin ou similar)
-        const STORAGE_URL = 'https://api.jsonstorage.net/v1/json/academia-performance-data';
-        const BACKUP_KEY = 'academiaPerformanceBackup';
+        // Chaves para fallback local
+        const STORAGE_KEY = 'academiaPerformanceData';
+        const LAST_CLEANUP_KEY = 'academiaPerformanceLastCleanup';
+
+        // Atualizar status de conexão
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('connectionStatus');
+            const buttons = document.querySelectorAll('.add-person button, .controls button');
+            
+            if (isConnected && database) {
+                statusEl.textContent = '🟢 Online';
+                statusEl.className = 'connection-status connected';
+                buttons.forEach(btn => btn.disabled = false);
+            } else {
+                statusEl.textContent = '🔴 Offline';
+                statusEl.className = 'connection-status disconnected';
+                buttons.forEach(btn => btn.disabled = false); // Permite uso offline
+            }
+        }
+
+        // Mostrar/ocultar overlay de carregamento
+        function showLoadingOverlay() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoadingOverlay() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
 
         // Inicializar dados dos professores
         function initializeProfessorsData() {
@@ -662,135 +738,122 @@
             });
         }
 
-        // Salvar dados online
-        async function saveDataOnline() {
+        // Salvar dados (Firebase ou localStorage)
+        async function saveData() {
             const dataToSave = {
                 studentsData: studentsData,
-                timestamp: new Date().toISOString(),
-                version: Date.now()
+                timestamp: new Date().toISOString()
             };
-            
-            try {
-                updateSyncStatus('Salvando...', 'syncing');
-                
-                // Tentativa 1: JSONStorage (gratuito)
-                const response = await fetch(STORAGE_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(dataToSave)
-                });
-                
-                if (response.ok) {
-                    isOnline = true;
-                    updateSyncStatus('Online', 'online');
-                    console.log('Dados salvos online com sucesso');
-                    return true;
-                } else {
-                    throw new Error('Falha na API principal');
-                }
-            } catch (error) {
-                console.log('Erro ao salvar online:', error);
-                
-                // Fallback: salvar localmente
+
+            if (isConnected && database) {
                 try {
-                    const data = JSON.stringify(dataToSave);
-                    const storageKey = `academiaData_${new Date().toISOString().split('T')[0]}`;
-                    Object.values(studentsData).flat().forEach((student, index) => {
-                        const key = `student_${index}_${student.name.replace(/\s+/g, '_')}`;
-                        const value = JSON.stringify({
-                            professor: Object.keys(studentsData).find(prof => studentsData[prof].includes(student)),
-                            ...student
-                        });
-                        if (value.length < 5000) { // Limite do localStorage
-                            localStorage.setItem(key, value);
-                        }
-                    });
-                    
-                    localStorage.setItem(BACKUP_KEY, data);
-                    isOnline = false;
-                    updateSyncStatus('Offline (Salvo Localmente)', 'offline');
-                    return false;
-                } catch (localError) {
-                    console.error('Erro ao salvar localmente:', localError);
-                    updateSyncStatus('Erro ao Salvar', 'offline');
-                    return false;
+                    await database.ref('academiaPerformance').set(dataToSave);
+                    console.log('Dados salvos no Firebase');
+                } catch (error) {
+                    console.error('Erro ao salvar no Firebase:', error);
+                    // Fallback para localStorage
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
                 }
+            } else {
+                // Modo offline
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+                console.log('Dados salvos localmente');
             }
         }
 
-        // Carregar dados online
-        async function loadDataOnline() {
-            try {
-                updateSyncStatus('Carregando...', 'syncing');
-                
-                const response = await fetch(STORAGE_URL);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    studentsData = data.studentsData || {};
-                    isOnline = true;
-                    updateSyncStatus('Online', 'online');
-                    console.log('Dados carregados online com sucesso');
-                    return true;
+        // Carregar dados (Firebase ou localStorage)
+        async function loadData() {
+            if (isConnected && database) {
+                try {
+                    const snapshot = await database.ref('academiaPerformance').once('value');
+                    const data = snapshot.val();
+                    
+                    if (data && data.studentsData) {
+                        studentsData = data.studentsData;
+                        console.log('Dados carregados do Firebase');
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar do Firebase:', error);
+                    loadLocalData();
                 }
-            } catch (error) {
-                console.log('Erro ao carregar online:', error);
+            } else {
+                loadLocalData();
             }
             
-            // Fallback: carregar localmente
+            initializeProfessorsData();
+        }
+
+        // Carregar dados locais
+        function loadLocalData() {
             try {
-                const savedData = localStorage.getItem(BACKUP_KEY);
+                const savedData = localStorage.getItem(STORAGE_KEY);
                 if (savedData) {
                     const parsed = JSON.parse(savedData);
                     studentsData = parsed.studentsData || {};
-                    isOnline = false;
-                    updateSyncStatus('Offline (Dados Locais)', 'offline');
-                    console.log('Dados carregados localmente');
-                    return true;
+                    console.log('Dados carregados do localStorage');
                 }
             } catch (error) {
                 console.error('Erro ao carregar dados locais:', error);
+                studentsData = {};
             }
-            
-            isOnline = false;
-            updateSyncStatus('Sem Dados', 'offline');
-            return false;
         }
 
-        // Atualizar status de sincronização
-        function updateSyncStatus(text, status) {
-            const syncStatus = document.getElementById('syncStatus');
-            syncStatus.textContent = text;
-            syncStatus.className = `sync-status ${status}`;
+        // Escutar mudanças em tempo real
+        function setupRealtimeListener() {
+            if (database && isConnected) {
+                database.ref('academiaPerformance').on('value', (snapshot) => {
+                    if (!isInitialized) return; // Evita loop na inicialização
+                    
+                    const data = snapshot.val();
+                    if (data && data.studentsData) {
+                        studentsData = data.studentsData;
+                        updateAllStudentsList();
+                        console.log('Dados atualizados em tempo real');
+                    }
+                });
+            }
         }
 
-        // Sincronizar agora
-        async function syncNow() {
-            await saveDataOnline();
-            await loadDataOnline();
-            updateAllStudentsList();
-        }
-
-        // Verificar se precisa fazer limpeza mensal
-        function checkMonthlyCleanup() {
+        // Verificar e realizar limpeza mensal
+        async function checkMonthlyCleanup() {
             const now = new Date();
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
             const currentMonthKey = `${currentYear}-${currentMonth}`;
             
-            const lastCleanup = localStorage.getItem('lastCleanup') || '';
+            let lastCleanup;
+            
+            if (isConnected && database) {
+                try {
+                    const snapshot = await database.ref('lastCleanup').once('value');
+                    lastCleanup = snapshot.val();
+                } catch (error) {
+                    lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+                }
+            } else {
+                lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+            }
             
             if (lastCleanup !== currentMonthKey) {
-                performMonthlyCleanup();
-                localStorage.setItem('lastCleanup', currentMonthKey);
+                await performMonthlyCleanup();
+                
+                // Salvar data da última limpeza
+                if (isConnected && database) {
+                    try {
+                        await database.ref('lastCleanup').set(currentMonthKey);
+                    } catch (error) {
+                        localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
+                    }
+                } else {
+                    localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
+                }
+                
                 console.log('Limpeza mensal realizada automaticamente');
             }
         }
 
-        // Realizar limpeza mensal automática
-        function performMonthlyCleanup() {
+        // Realizar limpeza mensal
+        async function performMonthlyCleanup() {
             professors.forEach(prof => {
                 if (studentsData[prof]) {
                     studentsData[prof] = studentsData[prof].filter(student => 
@@ -798,7 +861,84 @@
                     );
                 }
             });
-            saveDataOnline();
+            await saveData();
+        }
+
+        // Exibir mês atual
+        function updateCurrentMonth() {
+            const now = new Date();
+            const monthNames = [
+                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+            ];
+            document.getElementById('currentMonth').textContent = 
+                `Controle de Avaliações - ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+        }
+
+        // Criar interface dos professores
+        function createProfessorsInterface() {
+            const container = document.getElementById('professorsGrid');
+            container.innerHTML = '';
+
+            professors.forEach(professor => {
+                const column = document.createElement('div');
+                column.className = 'professor-column';
+                column.innerHTML = `
+                    <div class="professor-header">
+                        ${professor}
+                    </div>
+                    <div class="add-person">
+                        <input type="text" placeholder="Nome do aluno" id="input-${professor}">
+                        <button onclick="addStudent('${professor}')">Adicionar</button>
+                    </div>
+                    <div class="students-list" id="students-${professor}">
+                        <!-- Lista de alunos -->
+                    </div>
+                `;
+                container.appendChild(column);
+
+                // Adicionar evento Enter no input
+                const input = column.querySelector(`#input-${professor}`);
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        addStudent(professor);
+                    }
+                });
+            });
+
+            updateAllStudentsList();
+        }
+
+        // Adicionar aluno
+        async function addStudent(professor) {
+            const input = document.getElementById(`input-${professor}`);
+            const studentName = input.value.trim();
+            
+            if (studentName) {
+                const student = {
+                    name: studentName,
+                    status: 'pending',
+                    addedDate: new Date().toISOString(),
+                    evaluatedDate: null,
+                    completedDate: null
+                };
+                
+                studentsData[professor].push(student);
+                input.value = '';
+                updateStudentsList(professor);
+                updateStats();
+                await saveData();
+            }
+        }
+
+        // Remover aluno
+        async function removeStudent(professor, index) {
+            if (confirm('Tem certeza que deseja remover este aluno?')) {
+                studentsData[professor].splice(index, 1);
+                updateStudentsList(professor);
+                updateStats();
+                await saveData();
+            }
         }
 
         // Variáveis para controle do modal
@@ -814,16 +954,306 @@
             const dateInput = document.getElementById('modalDate');
             const timeInput = document.getElementById('modalTime');
             
-            // Configurar textos do modal
-            if (action === 'schedule') {
-                title.textContent = 'Agendar Avaliação';
+            if (action === 'evaluate') {
+                title.textContent = 'Marcar Avaliação';
                 subtitle.textContent = `Para: ${studentName}`;
-            } else if (action === 'confirm_evaluation') {
-                title.textContent = 'Confirmar Avaliação Realizada';
-                subtitle.textContent = `Para: ${studentName}`;
-            } else if (action === 'confirm_delivery') {
-                title.textContent = 'Confirmar Entrega do Treino';
-                subtitle.textContent = `Para: ${studentName}`;
+            } else if (action === 'deliver') {
+                title.textContent = 'Marcar Entrega';
+                subtitle.textContent = `Treino para: ${studentName}`;
             }
             
-            // Definir data e hora
+            const now = new Date();
+            dateInput.value = now.toISOString().split('T')[0];
+            timeInput.value = now.toTimeString().split(':').slice(0,2).join(':');
+            
+            currentModalAction = action;
+            currentProfessor = professor;
+            currentStudentIndex = index;
+            
+            modal.style.display = 'block';
+            dateInput.focus();
+        }
+
+        // Confirmar data e hora
+        async function confirmDateTime() {
+            const dateInput = document.getElementById('modalDate');
+            const timeInput = document.getElementById('modalTime');
+            
+            if (!dateInput.value || !timeInput.value) {
+                alert('Por favor, preencha a data e o horário.');
+                return;
+            }
+            
+            try {
+                const dateTime = new Date(dateInput.value + 'T' + timeInput.value + ':00');
+                
+                if (isNaN(dateTime.getTime())) {
+                    alert('Data ou horário inválido!');
+                    return;
+                }
+                
+                const student = studentsData[currentProfessor][currentStudentIndex];
+                
+                if (currentModalAction === 'evaluate' && student.status === 'pending') {
+                    student.status = 'evaluated';
+                    student.evaluatedDate = dateTime.toISOString();
+                } else if (currentModalAction === 'deliver' && student.status === 'evaluated') {
+                    student.status = 'completed';
+                    student.completedDate = dateTime.toISOString();
+                }
+                
+                updateStudentsList(currentProfessor);
+                updateStats();
+                await saveData();
+                
+                cancelDateTime();
+                
+            } catch (error) {
+                alert('Erro ao processar data e horário. Tente novamente.');
+            }
+        }
+
+        // Cancelar modal
+        function cancelDateTime() {
+            const modal = document.getElementById('dateTimeModal');
+            modal.style.display = 'none';
+            currentModalAction = null;
+            currentProfessor = null;
+            currentStudentIndex = null;
+        }
+
+        // Fechar modal clicando fora dele
+        window.onclick = function(event) {
+            const modal = document.getElementById('dateTimeModal');
+            if (event.target === modal) {
+                cancelDateTime();
+            }
+        }
+
+        // Marcar avaliação como feita
+        function markEvaluated(professor, index) {
+            const student = studentsData[professor][index];
+            if (student.status === 'pending') {
+                openDateTimeModal('evaluate', professor, index, student.name);
+            }
+        }
+
+        // Marcar treino como entregue
+        function markDelivered(professor, index) {
+            const student = studentsData[professor][index];
+            if (student.status === 'evaluated') {
+                openDateTimeModal('deliver', professor, index, student.name);
+            }
+        }
+
+        // Atualizar lista de alunos de um professor
+        function updateStudentsList(professor) {
+            const container = document.getElementById(`students-${professor}`);
+            const students = studentsData[professor];
+            
+            container.innerHTML = '';
+            
+            students.forEach((student, index) => {
+                const item = document.createElement('div');
+                item.className = `student-item ${student.status}`;
+                
+                const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
+                const evaluatedDate = student.evaluatedDate ? 
+                    new Date(student.evaluatedDate).toLocaleDateString("pt-BR") + ' às ' + 
+                    new Date(student.evaluatedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
+                const completedDate = student.completedDate ? 
+                    new Date(student.completedDate).toLocaleDateString("pt-BR") + ' às ' + 
+                    new Date(student.completedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
+                
+                let datesHTML = `<span class="date-label">Adicionado:</span>${addedDate}`;
+                if (evaluatedDate) {
+                    datesHTML += `<br><span class="date-label">Avaliação:</span>${evaluatedDate}`;
+                }
+                if (completedDate) {
+                    datesHTML += `<br><span class="date-label">Entregue:</span>${completedDate}`;
+                }
+                
+                let buttonsHTML = '';
+                if (student.status === 'pending') {
+                    buttonsHTML = `<button class="eval-btn" onclick="markEvaluated('${professor}', ${index})">Avaliar</button>`;
+                } else if (student.status === 'evaluated') {
+                    buttonsHTML = `
+                        <button class="eval-btn" disabled>✓ Avaliado</button>
+                        <button class="delivery-btn" onclick="markDelivered('${professor}', ${index})">Entregar</button>
+                    `;
+                } else if (student.status === 'completed') {
+                    buttonsHTML = `
+                        <button class="eval-btn" disabled>✓ Avaliado</button>
+                        <button class="delivery-btn" disabled>✓ Entregue</button>
+                    `;
+                }
+                
+                item.innerHTML = `
+                    <div class="student-header">
+                        <div class="student-name">${student.name}</div>
+                        <div class="action-buttons">
+                            ${buttonsHTML}
+                            <div class="status-indicator"></div>
+                            <button class="remove-btn" onclick="removeStudent('${professor}', ${index})">×</button>
+                        </div>
+                    </div>
+                    <div class="student-dates">${datesHTML}</div>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+
+        // Atualizar todas as listas
+        function updateAllStudentsList() {
+            professors.forEach(prof => updateStudentsList(prof));
+            updateStats();
+        }
+
+        // Atualizar estatísticas
+        function updateStats() {
+            let totalStudents = 0;
+            let evaluatedStudents = 0;
+            let completedDeliveries = 0;
+
+            professors.forEach(prof => {
+                const students = studentsData[prof];
+                totalStudents += students.length;
+                evaluatedStudents += students.filter(s => s.status === 'evaluated' || s.status === 'completed').length;
+                completedDeliveries += students.filter(s => s.status === 'completed').length;
+            });
+
+            const pendingStudents = totalStudents - evaluatedStudents - completedDeliveries;
+
+            document.getElementById('totalStudents').textContent = totalStudents;
+            document.getElementById('evaluatedStudents').textContent = evaluatedStudents;
+            document.getElementById('completedDeliveries').textContent = completedDeliveries;
+            document.getElementById('pendingStudents').textContent = pendingStudents;
+        }
+
+        // Resetar todas as avaliações
+        async function resetAllEvaluations() {
+            if (confirm('Tem certeza que deseja resetar todas as avaliações do mês? Esta ação não pode ser desfeita.')) {
+                professors.forEach(prof => {
+                    studentsData[prof].forEach(student => {
+                        student.status = 'pending';
+                        student.evaluatedDate = null;
+                        student.completedDate = null;
+                    });
+                });
+                updateAllStudentsList();
+                await saveData();
+            }
+        }
+
+        // Exportar dados
+        function exportData() {
+            let csvContent = "Professor,Aluno,Status,Data de Adição,Data da Avaliação,Data de Entrega\n";
+            
+            professors.forEach(professor => {
+                if (studentsData[professor].length === 0) {
+                    csvContent += `${professor},Nenhum aluno cadastrado,,,,,\n`;
+                } else {
+                    studentsData[professor].forEach(student => {
+                        let status = '';
+                        if (student.status === 'pending') status = 'Pendente';
+                        else if (student.status === 'evaluated') status = 'Avaliado';
+                        else if (student.status === 'completed') status = 'Entregue';
+                        
+                        const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
+                        const evaluatedDate = student.evaluatedDate ? 
+                            new Date(student.evaluatedDate).toLocaleDateString("pt-BR") : "";
+                        const completedDate = student.completedDate ? 
+                            new Date(student.completedDate).toLocaleDateString("pt-BR") : "";
+                        csvContent += `${professor},"${student.name}",${status},${addedDate},${evaluatedDate},${completedDate}\n`;
+                    });
+                }
+            });
+            
+            // Adicionar resumo estatístico
+            csvContent += "\n";
+            csvContent += "RESUMO ESTATÍSTICO\n";
+            csvContent += "Descrição,Quantidade\n";
+            csvContent += `Total de Alunos,${document.getElementById('totalStudents').textContent}\n`;
+            csvContent += `Avaliações Feitas,${document.getElementById('evaluatedStudents').textContent}\n`;
+            csvContent += `Treinos Entregues,${document.getElementById('completedDeliveries').textContent}\n`;
+            csvContent += `Pendentes,${document.getElementById('pendingStudents').textContent}\n`;
+            
+            const now = new Date();
+            const monthNames = [
+                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+            ];
+            csvContent += `Mês de Referência,"${monthNames[now.getMonth()]} ${now.getFullYear()}"\n`;
+            csvContent += `Data de Exportação,"${now.toLocaleDateString("pt-BR")} ${now.toLocaleTimeString("pt-BR")}"\n`;
+            
+            const BOM = '\uFEFF';
+            const dataBlob = new Blob([BOM + csvContent], {type: 'text/csv;charset=utf-8'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `avaliacoes_performance_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}.csv`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+        }
+
+        // Inicializar aplicação
+        async function initializeApp() {
+            try {
+                showLoadingOverlay();
+                
+                // Carregar dados
+                await loadData();
+                
+                // Verificar limpeza mensal
+                await checkMonthlyCleanup();
+                
+                // Atualizar interface
+                updateCurrentMonth();
+                createProfessorsInterface();
+                
+                // Configurar listener em tempo real
+                setupRealtimeListener();
+                
+                isInitialized = true;
+                
+                console.log('Sistema iniciado com sucesso');
+                
+            } catch (error) {
+                console.error('Erro ao inicializar:', error);
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // Inicializar quando Firebase estiver pronto ou após timeout
+        if (database) {
+            database.ref('.info/connected').once('value').then(() => {
+                initializeApp();
+            });
+        } else {
+            // Modo offline ou Firebase não configurado
+            setTimeout(initializeApp, 1000);
+        }
+
+        // Salvar dados antes de fechar a página
+        window.addEventListener('beforeunload', async function() {
+            if (isInitialized) {
+                await saveData();
+            }
+        });
+
+        // Sincronizar quando voltar online
+        window.addEventListener('online', function() {
+            console.log('Conexão restaurada');
+            if (isInitialized) {
+                loadData().then(() => {
+                    updateAllStudentsList();
+                });
+            }
+        });
+    </script>
+</body>
+</html>
