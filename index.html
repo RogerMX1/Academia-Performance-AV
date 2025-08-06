@@ -1283,7 +1283,53 @@
             }
         });
     </script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  // Configuração do Firebase (use sua configuração)
+  const firebaseConfig = {
+    apiKey: "AIzaSyBHq87y9chjWaWxp9nS9lv8Y3_Ik7zu5Ok",
+    authDomain: "academia-performance-16371.firebaseapp.com",
+    databaseURL: "https://academia-performance-16371-default-rtdb.firebaseio.com",
+    projectId: "academia-performance-16371",
+    storageBucket: "academia-performance-16371.firebasestorage.app",
+    messagingSenderId: "973421564338",
+    appId: "1:973421564338:web:099bcf503d677280f514ab"
+  };
+
+  // Inicialize o Firebase
+  const app = initializeApp(firebaseConfig);
+
+  // Inicialize Firestore (para dados estruturados)
+  const db = getFirestore(app);
+
+  // Inicialize Realtime Database (para dados em tempo real)
+  const realtimeDb = getDatabase(app);
+
+  // Exemplo: Salvar dados no Firestore
+  window.salvarAluno = async (nome, idade, plano) => {
+    try {
+      await addDoc(collection(db, "alunos"), { nome, idade, plano });
+      console.log("Aluno salvo no Firestore!");
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+    }
+  };
+
+  // Exemplo: Salvar dados no Realtime Database
+  window.salvarTreino = async (alunoId, treino) => {
+    try {
+      await set(ref(realtimeDb, `treinos/${alunoId}`), treino);
+      console.log("Treino salvo no Realtime DB!");
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+    }
+  };
+</script>
 </body>
 </html>
+
 
 
