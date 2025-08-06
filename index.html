@@ -955,24 +955,33 @@
                 
                 const student = studentsData[currentProfessor][currentStudentIndex];
                 
-                if (currentModalAction === 'schedule' && student.status === 'pending') {
+                // Atualizar status baseado na ação atual
+                if (currentModalAction === 'schedule') {
                     student.status = 'scheduled';
                     student.scheduledDate = dateTime.toISOString();
-                } else if (currentModalAction === 'confirm-eval' && student.status === 'scheduled') {
+                    console.log('Agendamento realizado:', student.name);
+                } else if (currentModalAction === 'confirm-eval') {
                     student.status = 'evaluated';
                     student.evaluatedDate = dateTime.toISOString();
-                } else if (currentModalAction === 'confirm-delivery' && student.status === 'evaluated') {
+                    console.log('Avaliação confirmada:', student.name);
+                } else if (currentModalAction === 'confirm-delivery') {
                     student.status = 'completed';
                     student.completedDate = dateTime.toISOString();
+                    console.log('Entrega confirmada:', student.name);
                 }
                 
+                // Forçar atualização da interface
                 updateStudentsList(currentProfessor);
                 updateStats();
                 await saveData();
                 
                 cancelDateTime();
                 
+                // Feedback visual
+                console.log('Status atualizado para:', student.status);
+                
             } catch (error) {
+                console.error('Erro ao processar data e horário:', error);
                 alert('Erro ao processar data e horário. Tente novamente.');
             }
         }
@@ -999,24 +1008,33 @@
         // 1. Agendar avaliação
         function scheduleEvaluation(professor, index) {
             const student = studentsData[professor][index];
+            console.log('Tentando agendar para:', student.name, 'Status atual:', student.status);
             if (student.status === 'pending') {
                 openDateTimeModal('schedule', professor, index, student.name);
+            } else {
+                console.log('Status não permite agendamento');
             }
         }
 
         // 2. Confirmar que a avaliação foi realizada
         function confirmEvaluation(professor, index) {
             const student = studentsData[professor][index];
+            console.log('Tentando confirmar avaliação para:', student.name, 'Status atual:', student.status);
             if (student.status === 'scheduled') {
                 openDateTimeModal('confirm-eval', professor, index, student.name);
+            } else {
+                console.log('Status não permite confirmação de avaliação');
             }
         }
 
         // 3. Confirmar que o treino foi entregue
         function confirmDelivery(professor, index) {
             const student = studentsData[professor][index];
+            console.log('Tentando confirmar entrega para:', student.name, 'Status atual:', student.status);
             if (student.status === 'evaluated') {
                 openDateTimeModal('confirm-delivery', professor, index, student.name);
+            } else {
+                console.log('Status não permite confirmação de entrega');
             }
         }
 
@@ -1025,11 +1043,18 @@
             const container = document.getElementById(`students-${professor}`);
             const students = studentsData[professor];
             
+            if (!container || !students) {
+                console.error('Container ou students não encontrados para:', professor);
+                return;
+            }
+            
             container.innerHTML = '';
             
             students.forEach((student, index) => {
                 const item = document.createElement('div');
                 item.className = `student-item ${student.status}`;
+                
+                console.log(`Renderizando ${student.name} com status: ${student.status}`);
                 
                 // Formatação das datas
                 const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
@@ -1061,28 +1086,35 @@
                     datesHTML += `<br><span class="date-label">📋 Entregue em:</span><span class="completed-date">${completedDate}</span>`;
                 }
                 
-                // Botões baseados no status
+                // Botões baseados no status - CORRIGIDO
                 let buttonsHTML = '';
                 
-                if (student.status === 'pending') {
-                    buttonsHTML = `<button class="btn btn-schedule" onclick="scheduleEvaluation('${professor}', ${index})">📅 Agendar</button>`;
-                } else if (student.status === 'scheduled') {
-                    buttonsHTML = `
-                        <button class="btn btn-schedule" disabled>📅 Agendado</button>
-                        <button class="btn btn-confirm-eval" onclick="confirmEvaluation('${professor}', ${index})">✅ Confirmar Avaliação</button>
-                    `;
-                } else if (student.status === 'evaluated') {
-                    buttonsHTML = `
-                        <button class="btn btn-schedule" disabled>📅 Agendado</button>
-                        <button class="btn btn-confirm-eval" disabled>✅ Avaliado</button>
-                        <button class="btn btn-confirm-delivery" onclick="confirmDelivery('${professor}', ${index})">📋 Confirmar Entrega</button>
-                    `;
-                } else if (student.status === 'completed') {
-                    buttonsHTML = `
-                        <button class="btn btn-schedule" disabled>📅 Agendado</button>
-                        <button class="btn btn-confirm-eval" disabled>✅ Avaliado</button>
-                        <button class="btn btn-confirm-delivery" disabled>📋 Entregue</button>
-                    `;
+                switch(student.status) {
+                    case 'pending':
+                        buttonsHTML = `<button class="btn btn-schedule" onclick="scheduleEvaluation('${professor}', ${index})">📅 Agendar</button>`;
+                        break;
+                    case 'scheduled':
+                        buttonsHTML = `
+                            <button class="btn btn-schedule" disabled>📅 Agendado</button>
+                            <button class="btn btn-confirm-eval" onclick="confirmEvaluation('${professor}', ${index})">✅ Confirmar Avaliação</button>
+                        `;
+                        break;
+                    case 'evaluated':
+                        buttonsHTML = `
+                            <button class="btn btn-schedule" disabled>📅 Agendado</button>
+                            <button class="btn btn-confirm-eval" disabled>✅ Avaliado</button>
+                            <button class="btn btn-confirm-delivery" onclick="confirmDelivery('${professor}', ${index})">📋 Confirmar Entrega</button>
+                        `;
+                        break;
+                    case 'completed':
+                        buttonsHTML = `
+                            <button class="btn btn-schedule" disabled>📅 Agendado</button>
+                            <button class="btn btn-confirm-eval" disabled>✅ Avaliado</button>
+                            <button class="btn btn-confirm-delivery" disabled>📋 Entregue</button>
+                        `;
+                        break;
+                    default:
+                        buttonsHTML = `<button class="btn btn-schedule" onclick="scheduleEvaluation('${professor}', ${index})">📅 Agendar</button>`;
                 }
                 
                 item.innerHTML = `
@@ -1099,6 +1131,8 @@
                 
                 container.appendChild(item);
             });
+            
+            console.log(`Lista atualizada para ${professor} com ${students.length} alunos`);
         }
 
         // Atualizar todas as listas
