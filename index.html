@@ -1027,27 +1027,19 @@
 
     // Confirmar data e hora
   async function confirmDateTime() {
+  async function confirmDateTime() {
     const dateInput = document.getElementById('modalDate');
     const timeInput = document.getElementById('modalTime');
-    
+
     if (!dateInput.value || !timeInput.value) {
         alert('Por favor, preencha a data e o horário.');
         return;
     }
-    
+
     try {
-        let dateValue = dateInput.value;
-        
-        // Verifica se a data está no formato dd/mm/yyyy e converte para yyyy-mm-dd
-        // Isso resolve o problema de localidade do navegador
-        if (dateValue.includes('/')) {
-            const parts = dateValue.split('/');
-            if (parts.length === 3) {
-                dateValue = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            }
-        }
-        
-        const dateTimeString = `${dateValue}T${timeInput.value}:00`;
+        // Combina os valores dos inputs diretamente no formato YYYY-MM-DDTHH:mm:ss
+        // Os inputs "date" e "time" já retornam os valores no formato correto para esta operação
+        const dateTimeString = `${dateInput.value}T${timeInput.value}:00`;
         const dateTime = new Date(dateTimeString);
 
         if (isNaN(dateTime.getTime())) {
@@ -1057,7 +1049,7 @@
         }
 
         const student = studentsData[currentProfessor][currentStudentIndex];
-        
+
         if (currentModalAction === 'schedule') {
             student.status = 'scheduled';
             student.scheduledDate = dateTime.toISOString();
@@ -1068,12 +1060,12 @@
             student.status = 'completed';
             student.completedDate = dateTime.toISOString();
         }
-        
+
         cancelDateTime();
         updateStudentsList(currentProfessor);
         updateStats();
         await saveData();
-        
+
     } catch (error) {
         console.error('Erro ao processar data/hora:', error);
         alert('Erro ao processar data ou horário. Verifique o formato.');
@@ -1278,5 +1270,6 @@
     });
 
 </script>
+
 
 
