@@ -700,792 +700,569 @@
     </div>
 
     <script type="module">
-        // Import Firebase functions
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-        import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+    // Importações do Firebase atualizadas para a versão v10
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js"; // Adicionado para evitar erro
 
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBHq87y9chjWaWxp9nS9lv8Y3_Ik7zu5Ok",
-            authDomain: "academia-performance-16371.firebaseapp.com",
-            databaseURL: "https://academia-performance-16371-default-rtdb.firebaseio.com",
-            projectId: "academia-performance-16371",
-            storageBucket: "academia-performance-16371.firebasestorage.app",
-            messagingSenderId: "973421564338",
-            appId: "1:973421564338:web:099bcf503d677280f514ab"
+    // Configuração do Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyBHq87y9chjWaWxp9nS9lv8Y3_Ik7zu5Ok",
+        authDomain: "academia-performance-16371.firebaseapp.com",
+        databaseURL: "https://academia-performance-16371-default-rtdb.firebaseio.com",
+        projectId: "academia-performance-16371",
+        storageBucket: "academia-performance-16371.firebasestorage.app",
+        messagingSenderId: "973421564338",
+        appId: "1:973421564338:web:099bcf503d677280f514ab"
+    };
+
+    // Inicialização do Firebase
+    let app, database, isConnected = false;
+    
+    try {
+        app = initializeApp(firebaseConfig);
+        database = getDatabase(app);
+        getAuth(app); // Inicializa o Auth para evitar erro de inicialização tardia
+
+        // Monitorar status de conexão
+        const connectedRef = ref(database, ".info/connected");
+        onValue(connectedRef, (snap) => {
+            isConnected = snap.val() === true;
+            updateConnectionStatus();
+            if (isConnected && !window.isFirebaseConnected) {
+                window.isFirebaseConnected = true;
+                init();
+            }
+        });
+    } catch (error) {
+        console.warn('Firebase não configurado, usando modo offline:', error);
+        isConnected = false;
+        setTimeout(() => {
+            updateConnectionStatus();
+            hideLoadingOverlay();
+            init();
+        }, 1000);
+    }
+    
+    // Deixa as funções globais para o HTML
+    window.addStudent = addStudent;
+    window.removeStudent = removeStudent;
+    window.openDateTimeModal = openDateTimeModal;
+    window.confirmDateTime = confirmDateTime;
+    window.cancelDateTime = cancelDateTime;
+    window.resetAllEvaluations = resetAllEvaluations;
+    window.exportData = exportData;
+    window.updateStudentStatus = updateStudentStatus;
+
+    const professors = ['Robson', 'Roger', 'Maicon', 'Roberto', 'Naldon', 'Helízia', 'Danielle'];
+    let studentsData = {};
+    let isInitialized = false;
+
+    // Chaves para fallback local
+    const STORAGE_KEY = 'academiaPerformanceData';
+    const LAST_CLEANUP_KEY = 'academiaPerformanceLastCleanup';
+
+    // Atualizar status de conexão
+    function updateConnectionStatus() {
+        const statusEl = document.getElementById('connectionStatus');
+        const buttons = document.querySelectorAll('.add-person button, .controls button');
+        
+        if (isConnected) {
+            statusEl.textContent = '🟢 Online';
+            statusEl.className = 'connection-status connected';
+            buttons.forEach(btn => btn.disabled = false);
+        } else {
+            statusEl.textContent = '🔴 Offline';
+            statusEl.className = 'connection-status disconnected';
+            buttons.forEach(btn => btn.disabled = false);
+        }
+    }
+
+    function showLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    function initializeProfessorsData() {
+        professors.forEach(prof => {
+            if (!studentsData[prof]) {
+                studentsData[prof] = [];
+            }
+        });
+    }
+
+    async function saveData() {
+        const dataToSave = {
+            studentsData: studentsData,
+            timestamp: new Date().toISOString()
         };
 
-        // Initialize Firebase
-        let app, database, isConnected = false;
-        
-        try {
-            app = initializeApp(firebaseConfig);
-            database = getDatabase(app);
-            
-            // Monitor connection status
-            const connectedRef = ref(database, ".info/connected");
-            onValue(connectedRef, (snap) => {
-                isConnected = snap.val() === true;
-                updateConnectionStatus();
-            });
-            
-            // Make functions globally available
-            window.firebaseApp = app;
-            window.firebaseDB = database;
-            window.firebaseRef = ref;
-            window.firebaseSet = set;
-            window.firebaseGet = get;
-            window.firebaseOnValue = onValue;
-            
-        } catch (error) {
-            console.warn('Firebase não configurado, usando modo offline:', error);
-            isConnected = false;
-            setTimeout(() => {
-                updateConnectionStatus();
-                hideLoadingOverlay();
-                initializeApp();
-            }, 1000);
-        }
-
-        const professors = ['Robson', 'Roger', 'Maicon', 'Roberto', 'Naldon', 'Helízia', 'Danielle'];
-        let studentsData = {};
-        let isInitialized = false;
-
-        // Chaves para fallback local
-        const STORAGE_KEY = 'academiaPerformanceData';
-        const LAST_CLEANUP_KEY = 'academiaPerformanceLastCleanup';
-
-        // Atualizar status de conexão
-        function updateConnectionStatus() {
-            const statusEl = document.getElementById('connectionStatus');
-            const buttons = document.querySelectorAll('.add-person button, .controls button');
-            
-            if (isConnected && database) {
-                statusEl.textContent = '🟢 Online';
-                statusEl.className = 'connection-status connected';
-                buttons.forEach(btn => btn.disabled = false);
-            } else {
-                statusEl.textContent = '🔴 Offline';
-                statusEl.className = 'connection-status disconnected';
-                buttons.forEach(btn => btn.disabled = false);
-            }
-        }
-
-        function showLoadingOverlay() {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-        }
-
-        function hideLoadingOverlay() {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-
-        function initializeProfessorsData() {
-            professors.forEach(prof => {
-                if (!studentsData[prof]) {
-                    studentsData[prof] = [];
-                }
-            });
-        }
-
-        async function saveData() {
-            const dataToSave = {
-                studentsData: studentsData,
-                timestamp: new Date().toISOString()
-            };
-
-            if (isConnected && database) {
-                try {
-                    await database.ref('academiaPerformance').set(dataToSave);
-                    console.log('Dados salvos no Firebase');
-                } catch (error) {
-                    console.error('Erro ao salvar no Firebase:', error);
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-                }
-            } else {
+        if (isConnected) {
+            try {
+                await set(ref(database, 'academiaPerformance'), dataToSave);
+                console.log('Dados salvos no Firebase');
+            } catch (error) {
+                console.error('Erro ao salvar no Firebase:', error);
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-                console.log('Dados salvos localmente');
             }
+        } else {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+            console.log('Dados salvos localmente');
         }
+    }
 
-        async function loadData() {
-            if (isConnected && database) {
-                try {
-                    const snapshot = await database.ref('academiaPerformance').once('value');
-                    const data = snapshot.val();
-                    
-                    if (data && data.studentsData) {
-                        studentsData = data.studentsData;
-                        console.log('Dados carregados do Firebase');
-                    }
-                } catch (error) {
-                    console.error('Erro ao carregar do Firebase:', error);
+    async function loadData() {
+        if (isConnected) {
+            try {
+                const snapshot = await get(ref(database, 'academiaPerformance'));
+                const data = snapshot.val();
+                
+                if (data && data.studentsData) {
+                    studentsData = data.studentsData;
+                    console.log('Dados carregados do Firebase');
+                } else {
+                    console.log('Nenhum dado encontrado no Firebase, carregando localmente...');
                     loadLocalData();
                 }
-            } else {
+            } catch (error) {
+                console.error('Erro ao carregar do Firebase:', error);
                 loadLocalData();
             }
-            
-            initializeProfessorsData();
+        } else {
+            loadLocalData();
         }
+        
+        initializeProfessorsData();
+    }
 
-        function loadLocalData() {
+    function loadLocalData() {
+        try {
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            if (savedData) {
+                const parsed = JSON.parse(savedData);
+                studentsData = parsed.studentsData || {};
+                console.log('Dados carregados do localStorage');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dados locais:', error);
+            studentsData = {};
+        }
+    }
+
+    function setupRealtimeListener() {
+        if (database && isConnected) {
+            onValue(ref(database, 'academiaPerformance'), (snapshot) => {
+                if (!isInitialized) return;
+                
+                const data = snapshot.val();
+                if (data && data.studentsData) {
+                    studentsData = data.studentsData;
+                    updateAllStudentsList();
+                    updateStats();
+                    console.log('Dados atualizados em tempo real');
+                }
+            });
+        }
+    }
+
+    async function checkMonthlyCleanup() {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        const currentMonthKey = `${currentYear}-${currentMonth}`;
+        
+        let lastCleanup;
+        
+        if (isConnected) {
             try {
-                const savedData = localStorage.getItem(STORAGE_KEY);
-                if (savedData) {
-                    const parsed = JSON.parse(savedData);
-                    studentsData = parsed.studentsData || {};
-                    console.log('Dados carregados do localStorage');
-                }
+                const snapshot = await get(ref(database, 'lastCleanup'));
+                lastCleanup = snapshot.val();
             } catch (error) {
-                console.error('Erro ao carregar dados locais:', error);
-                studentsData = {};
-            }
-        }
-
-        function setupRealtimeListener() {
-            if (database && isConnected) {
-                database.ref('academiaPerformance').on('value', (snapshot) => {
-                    if (!isInitialized) return;
-                    
-                    const data = snapshot.val();
-                    if (data && data.studentsData) {
-                        studentsData = data.studentsData;
-                        updateAllStudentsList();
-                        console.log('Dados atualizados em tempo real');
-                    }
-                });
-            }
-        }
-
-        async function checkMonthlyCleanup() {
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
-            const currentMonthKey = `${currentYear}-${currentMonth}`;
-            
-            let lastCleanup;
-            
-            if (isConnected && database) {
-                try {
-                    const snapshot = await database.ref('lastCleanup').once('value');
-                    lastCleanup = snapshot.val();
-                } catch (error) {
-                    lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
-                }
-            } else {
                 lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
             }
+        } else {
+            lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+        }
+        
+        if (lastCleanup !== currentMonthKey) {
+            await performMonthlyCleanup();
             
-            if (lastCleanup !== currentMonthKey) {
-                await performMonthlyCleanup();
-                
-                if (isConnected && database) {
-                    try {
-                        await database.ref('lastCleanup').set(currentMonthKey);
-                    } catch (error) {
-                        localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
-                    }
-                } else {
+            if (isConnected) {
+                try {
+                    await set(ref(database, 'lastCleanup'), currentMonthKey);
+                } catch (error) {
                     localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
                 }
-                
-                console.log('Limpeza mensal realizada automaticamente');
+            } else {
+                localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
             }
+            
+            console.log('Limpeza mensal realizada automaticamente');
         }
+    }
 
-        async function performMonthlyCleanup() {
-            professors.forEach(prof => {
-                if (studentsData[prof]) {
-                    studentsData[prof] = studentsData[prof].filter(student => 
-                        student.status !== 'completed'
-                    );
+    async function performMonthlyCleanup() {
+        professors.forEach(prof => {
+            if (studentsData[prof]) {
+                studentsData[prof] = studentsData[prof].filter(student => 
+                    student.status !== 'completed'
+                );
+            }
+        });
+        await saveData();
+    }
+
+    function updateCurrentMonth() {
+        const now = new Date();
+        const monthNames = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        ];
+        document.getElementById('currentMonth').textContent = 
+            `Controle de Avaliações - ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+    }
+
+    function createProfessorsInterface() {
+        const container = document.getElementById('professorsGrid');
+        container.innerHTML = '';
+
+        professors.forEach(professor => {
+            const column = document.createElement('div');
+            column.className = 'professor-column';
+            column.innerHTML = `
+                <div class="professor-header">
+                    ${professor}
+                </div>
+                <div class="add-person">
+                    <input type="text" placeholder="Nome do aluno" id="input-${professor}">
+                    <button onclick="addStudent('${professor}')">Adicionar</button>
+                </div>
+                <div class="students-list" id="students-${professor}">
+                    </div>
+            `;
+            container.appendChild(column);
+
+            const input = column.querySelector(`#input-${professor}`);
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addStudent(professor);
                 }
             });
+        });
+
+        updateAllStudentsList();
+    }
+
+    async function addStudent(professor) {
+        const input = document.getElementById(`input-${professor}`);
+        const studentName = input.value.trim();
+        
+        if (studentName) {
+            const student = {
+                name: studentName,
+                status: 'pending', // pending, scheduled, evaluated, completed
+                addedDate: new Date().toISOString(),
+                scheduledDate: null,    // Data/hora AGENDADA para avaliação
+                evaluatedDate: null,    // Data/hora REAL que foi avaliado
+                completedDate: null      // Data/hora REAL que foi entregue
+            };
+            
+            studentsData[professor].push(student);
+            input.value = '';
+            updateStudentsList(professor);
+            updateStats();
             await saveData();
         }
+    }
 
-        function updateCurrentMonth() {
-            const now = new Date();
-            const monthNames = [
-                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-            ];
-            document.getElementById('currentMonth').textContent = 
-                `Controle de Avaliações - ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+    async function removeStudent(professor, index) {
+        if (confirm('Tem certeza que deseja remover este aluno?')) {
+            studentsData[professor].splice(index, 1);
+            updateStudentsList(professor);
+            updateStats();
+            await saveData();
         }
+    }
 
-        function createProfessorsInterface() {
-            const container = document.getElementById('professorsGrid');
-            container.innerHTML = '';
+    // Variáveis para controle do modal
+    let currentModalAction = null;
+    let currentProfessor = null;
+    let currentStudentIndex = null;
 
-            professors.forEach(professor => {
-                const column = document.createElement('div');
-                column.className = 'professor-column';
-                column.innerHTML = `
-                    <div class="professor-header">
-                        ${professor}
-                    </div>
-                    <div class="add-person">
-                        <input type="text" placeholder="Nome do aluno" id="input-${professor}">
-                        <button onclick="addStudent('${professor}')">Adicionar</button>
-                    </div>
-                    <div class="students-list" id="students-${professor}">
-                        <!-- Lista de alunos -->
-                    </div>
-                `;
-                container.appendChild(column);
+    // Abrir modal de data e hora
+    function openDateTimeModal(action, professor, index) {
+        const modal = document.getElementById('dateTimeModal');
+        const title = document.getElementById('modalTitle');
+        const subtitle = document.getElementById('modalSubtitle');
+        const dateInput = document.getElementById('modalDate');
+        const timeInput = document.getElementById('modalTime');
+        
+        const studentName = studentsData[professor][index].name;
 
-                const input = column.querySelector(`#input-${professor}`);
-                input.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        addStudent(professor);
-                    }
-                });
-            });
-
-            updateAllStudentsList();
+        if (action === 'schedule') {
+            title.textContent = '📅 Agendar Avaliação';
+            subtitle.textContent = `Para: ${studentName}`;
+        } else if (action === 'evaluate') {
+            title.textContent = '✅ Confirmar Avaliação Realizada';
+            subtitle.textContent = `Aluno: ${studentName}`;
+        } else if (action === 'deliver') {
+            title.textContent = '📦 Confirmar Entrega do Treino';
+            subtitle.textContent = `Para: ${studentName}`;
         }
+        
+        const now = new Date();
+        dateInput.value = now.toISOString().split('T')[0];
+        timeInput.value = now.toTimeString().split(' ')[0].slice(0, 5);
+        
+        currentModalAction = action;
+        currentProfessor = professor;
+        currentStudentIndex = index;
+        
+        modal.style.display = 'block';
+        dateInput.focus();
+    }
 
-        async function addStudent(professor) {
-            const input = document.getElementById(`input-${professor}`);
-            const studentName = input.value.trim();
-            
-            if (studentName) {
-                const student = {
-                    name: studentName,
-                    status: 'pending', // pending, scheduled, evaluated, completed
-                    addedDate: new Date().toISOString(),
-                    scheduledDate: null,    // Data/hora AGENDADA para avaliação
-                    evaluatedDate: null,    // Data/hora REAL que foi avaliado
-                    completedDate: null     // Data/hora REAL que foi entregue
-                };
-                
-                studentsData[professor].push(student);
-                input.value = '';
-                updateStudentsList(professor);
-                updateStats();
-                await saveData();
-            }
+    // Confirmar data e hora
+    async function confirmDateTime() {
+        const dateInput = document.getElementById('modalDate');
+        const timeInput = document.getElementById('modalTime');
+        
+        if (!dateInput.value || !timeInput.value) {
+            alert('Por favor, preencha a data e o horário.');
+            return;
         }
-
-        async function removeStudent(professor, index) {
-            if (confirm('Tem certeza que deseja remover este aluno?')) {
-                studentsData[professor].splice(index, 1);
-                updateStudentsList(professor);
-                updateStats();
-                await saveData();
-            }
-        }
-
-        // Variáveis para controle do modal
-        let currentModalAction = null;
-        let currentProfessor = null;
-        let currentStudentIndex = null;
-
-        // Abrir modal de data e hora
-        function openDateTimeModal(action, professor, index, studentName) {
-            const modal = document.getElementById('dateTimeModal');
-            const title = document.getElementById('modalTitle');
-            const subtitle = document.getElementById('modalSubtitle');
-            const dateInput = document.getElementById('modalDate');
-            const timeInput = document.getElementById('modalTime');
+        
+        try {
+            const dateTimeString = `${dateInput.value}T${timeInput.value}:00`;
+            const dateTime = new Date(dateTimeString);
             
-            if (action === 'schedule') {
-                title.textContent = '📅 Agendar Avaliação';
-                subtitle.textContent = `Para: ${studentName}`;
-            } else if (action === 'evaluate') {
-                title.textContent = '✅ Confirmar Avaliação Realizada';
-                subtitle.textContent = `Aluno: ${studentName}`;
-            } else if (action === 'deliver') {
-                title.textContent = '📦 Confirmar Entrega do Treino';
-                subtitle.textContent = `Para: ${studentName}`;
-            }
-            
-            const now = new Date();
-            dateInput.value = now.toISOString().split('T')[0];
-            timeInput.value = now.toTimeString().split(':').slice(0,2).join(':');
-            
-            currentModalAction = action;
-            currentProfessor = professor;
-            currentStudentIndex = index;
-            
-            modal.style.display = 'block';
-            dateInput.focus();
-        }
-
-        // Confirmar data e hora
-        async function confirmDateTime() {
-            const dateInput = document.getElementById('modalDate');
-            const timeInput = document.getElementById('modalTime');
-            
-            if (!dateInput.value || !timeInput.value) {
-                alert('Por favor, preencha a data e o horário.');
+            if (isNaN(dateTime.getTime())) {
+                alert('Data ou horário inválido!');
                 return;
             }
             
-            try {
-                const dateTime = new Date(dateInput.value + 'T' + timeInput.value + ':00');
-                
-                if (isNaN(dateTime.getTime())) {
-                    alert('Data ou horário inválido!');
-                    return;
-                }
-                
-                const student = studentsData[currentProfessor][currentStudentIndex];
-                
-                if (currentModalAction === 'schedule' && student.status === 'pending') {
-                    student.status = 'scheduled';
-                    student.scheduledDate = dateTime.toISOString();
-                } else if (currentModalAction === 'evaluate' && student.status === 'scheduled') {
-                    student.status = 'evaluated';
-                    student.evaluatedDate = dateTime.toISOString();
-                } else if (currentModalAction === 'deliver' && student.status === 'evaluated') {
-                    student.status = 'completed';
-                    student.completedDate = dateTime.toISOString();
-                }
-                
-                updateStudentsList(currentProfessor);
-                updateStats();
-                await saveData();
-                
-                cancelDateTime();
-                
-            } catch (error) {
-                alert('Erro ao processar data e horário. Tente novamente.');
-            }
-        }
-
-        // Cancelar modal
-        function cancelDateTime() {
-            const modal = document.getElementById('dateTimeModal');
-            modal.style.display = 'none';
-            currentModalAction = null;
-            currentProfessor = null;
-            currentStudentIndex = null;
-        }
-
-        // Fechar modal clicando fora dele
-        window.onclick = function(event) {
-            const modal = document.getElementById('dateTimeModal');
-            if (event.target === modal) {
-                cancelDateTime();
-            }
-        }
-
-        // 1ª ETAPA: Agendar avaliação
-        function scheduleEvaluation(professor, index) {
-            const student = studentsData[professor][index];
-            if (student.status === 'pending') {
-                openDateTimeModal('schedule', professor, index, student.name);
-            }
-        }
-
-        // 2ª ETAPA: Confirmar que avaliação foi realizada
-        function confirmEvaluation(professor, index) {
-            const student = studentsData[professor][index];
-            if (student.status === 'scheduled') {
-                openDateTimeModal('evaluate', professor, index, student.name);
-            }
-        }
-
-        // 3ª ETAPA: Confirmar entrega do treino
-        function confirmDelivery(professor, index) {
-            const student = studentsData[professor][index];
-            if (student.status === 'evaluated') {
-                openDateTimeModal('deliver', professor, index, student.name);
-            }
-        }
-
-        // Atualizar lista de alunos de um professor
-        function updateStudentsList(professor) {
-            const container = document.getElementById(`students-${professor}`);
-            const students = studentsData[professor];
+            const student = studentsData[currentProfessor][currentStudentIndex];
             
-            container.innerHTML = '';
+            if (currentModalAction === 'schedule') {
+                student.status = 'scheduled';
+                student.scheduledDate = dateTimeString;
+            } else if (currentModalAction === 'evaluate') {
+                student.status = 'evaluated';
+                student.evaluatedDate = dateTimeString;
+            } else if (currentModalAction === 'deliver') {
+                student.status = 'completed';
+                student.completedDate = dateTimeString;
+            }
             
-            students.forEach((student, index) => {
-                const item = document.createElement('div');
-                item.className = `student-item ${student.status}`;
-                
-                // Formatar datas
-                const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
-                
-                let scheduledDate = null;
-                if (student.scheduledDate) {
-                    const date = new Date(student.scheduledDate);
-                    scheduledDate = date.toLocaleDateString("pt-BR") + ' às ' + 
-                        date.toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'});
-                }
-                
-                let evaluatedDate = null;
-                if (student.evaluatedDate) {
-                    const date = new Date(student.evaluatedDate);
-                    evaluatedDate = date.toLocaleDateString("pt-BR") + ' às ' + 
-                        date.toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'});
-                }
-                
-                let completedDate = null;
-                if (student.completedDate) {
-                    const date = new Date(student.completedDate);
-                    completedDate = date.toLocaleDateString("pt-BR") + ' às ' + 
-                        date.toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'});
-                }
-                
-                // Status text
-                let statusText = '';
-                switch(student.status) {
-                    case 'pending': statusText = 'Pendente'; break;
-                    case 'scheduled': statusText = 'Agendado'; break;
-                    case 'evaluated': statusText = 'Avaliado'; break;
-                    case 'completed': statusText = 'Concluído'; break;
-                }
-                
-                // Montar HTML das datas
-                let datesHTML = `
-                    <div class="date-row">
-                        <span class="date-label">Adicionado:</span>
-                        <span class="date-value">${addedDate}</span>
-                    </div>
-                `;
-                
-                if (scheduledDate) {
-                    datesHTML += `
-                        <div class="date-row">
-                            <span class="date-label">📅 Agendado:</span>
-                            <span class="date-value">${scheduledDate}</span>
-                        </div>
-                    `;
-                }
-                
-                if (evaluatedDate) {
-                    datesHTML += `
-                        <div class="date-row">
-                            <span class="date-label">✅ Avaliado:</span>
-                            <span class="date-value">${evaluatedDate}</span>
-                        </div>
-                    `;
-                }
-                
-                if (completedDate) {
-                    datesHTML += `
-                        <div class="date-row">
-                            <span class="date-label">📦 Entregue:</span>
-                            <span class="date-value">${completedDate}</span>
-                        </div>
-                    `;
-                }
-                
-                // Botões baseados no status
-                let buttonsHTML = '';
-                if (student.status === 'pending') {
-                    buttonsHTML = `<button class="action-btn schedule-btn" onclick="scheduleEvaluation('${professor}', ${index})">📅 Agendar</button>`;
-                } else if (student.status === 'scheduled') {
-                    buttonsHTML = `
-                        <button class="action-btn schedule-btn" disabled>📅 Agendado</button>
-                        <button class="action-btn evaluate-btn" onclick="confirmEvaluation('${professor}', ${index})">✅ Avaliar</button>
-                    `;
-                } else if (student.status === 'evaluated') {
-                    buttonsHTML = `
-                        <button class="action-btn schedule-btn" disabled>📅 Agendado</button>
-                        <button class="action-btn evaluate-btn" disabled>✅ Avaliado</button>
-                        <button class="action-btn deliver-btn" onclick="confirmDelivery('${professor}', ${index})">📦 Entregar</button>
-                    `;
-                } else if (student.status === 'completed') {
-                    buttonsHTML = `
-                        <button class="action-btn schedule-btn" disabled>📅 Agendado</button>
-                        <button class="action-btn evaluate-btn" disabled>✅ Avaliado</button>
-                        <button class="action-btn deliver-btn" disabled>📦 Entregue</button>
-                    `;
-                }
-                
-                item.innerHTML = `
-                    <div class="student-header">
-                        <div class="student-name">${student.name}</div>
-                        <div class="student-status">${statusText}</div>
-                    </div>
-                    <div class="student-dates">${datesHTML}</div>
-                    <div class="action-buttons">
-                        ${buttonsHTML}
-                        <button class="remove-btn" onclick="removeStudent('${professor}', ${index})">×</button>
-                    </div>
-                `;
-                
-                container.appendChild(item);
-            });
-        }
-
-        // Atualizar todas as listas
-        function updateAllStudentsList() {
-            professors.forEach(prof => updateStudentsList(prof));
+            cancelDateTime();
+            updateStudentsList(currentProfessor);
             updateStats();
+            await saveData();
+            
+        } catch (error) {
+            console.error('Erro ao processar data/hora:', error);
+            alert('Erro ao processar data ou horário. Verifique o formato.');
         }
+    }
 
-        // Atualizar estatísticas
-        function updateStats() {
-            let totalStudents = 0;
-            let scheduledStudents = 0;
-            let evaluatedStudents = 0;
-            let completedDeliveries = 0;
-            let pendingStudents = 0;
+    // Cancelar modal
+    function cancelDateTime() {
+        const modal = document.getElementById('dateTimeModal');
+        modal.style.display = 'none';
+        currentModalAction = null;
+        currentProfessor = null;
+        currentStudentIndex = null;
+    }
 
-            professors.forEach(prof => {
-                const students = studentsData[prof];
-                totalStudents += students.length;
-                
-                students.forEach(student => {
-                    switch(student.status) {
-                        case 'pending': pendingStudents++; break;
-                        case 'scheduled': scheduledStudents++; break;
-                        case 'evaluated': evaluatedStudents++; break;
-                        case 'completed': completedDeliveries++; break;
-                    }
-                });
-            });
-
-            document.getElementById('totalStudents').textContent = totalStudents;
-            document.getElementById('scheduledStudents').textContent = scheduledStudents;
-            document.getElementById('evaluatedStudents').textContent = evaluatedStudents;
-            document.getElementById('completedDeliveries').textContent = completedDeliveries;
-            document.getElementById('pendingStudents').textContent = pendingStudents;
+    async function updateStudentStatus(professor, index, newStatus, dateType) {
+        const student = studentsData[professor][index];
+        student.status = newStatus;
+        if (dateType) {
+            student[dateType] = new Date().toISOString();
         }
+        
+        updateStudentsList(professor);
+        updateStats();
+        await saveData();
+    }
 
-        // Resetar todas as avaliações
-        async function resetAllEvaluations() {
-            if (confirm('Tem certeza que deseja resetar todas as avaliações do mês? Esta ação não pode ser desfeita.')) {
-                professors.forEach(prof => {
-                    studentsData[prof].forEach(student => {
-                        student.status = 'pending';
-                        student.scheduledDate = null;
-                        student.evaluatedDate = null;
-                        student.completedDate = null;
-                    });
-                });
-                updateAllStudentsList();
-                await saveData();
+    function updateAllStudentsList() {
+        professors.forEach(prof => updateStudentsList(prof));
+    }
+
+    function updateStudentsList(professor) {
+        const list = document.getElementById(`students-${professor}`);
+        list.innerHTML = '';
+        
+        const sortedStudents = [...(studentsData[professor] || [])].sort((a, b) => {
+            const statusOrder = { 'pending': 1, 'scheduled': 2, 'evaluated': 3, 'completed': 4 };
+            if (statusOrder[a.status] !== statusOrder[b.status]) {
+                return statusOrder[a.status] - statusOrder[b.status];
             }
-        }
-
-        // Exportar dados
-        function exportData() {
-            let csvContent = "Professor,Aluno,Status,Data de Adição,Data Agendada,Data da Avaliação,Data de Entrega\n";
-            
-            professors.forEach(professor => {
-                if (studentsData[professor].length === 0) {
-                    csvContent += `${professor},Nenhum aluno cadastrado,,,,,,\n`;
-                } else {
-                    studentsData[professor].forEach(student => {
-                        let status = '';
-                        switch(student.status) {
-                            case 'pending': status = 'Pendente'; break;
-                            case 'scheduled': status = 'Agendado'; break;
-                            case 'evaluated': status = 'Avaliado'; break;
-                            case 'completed': status = 'Concluído'; break;
-                        }
-                        
-                        const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
-                        const scheduledDate = student.scheduledDate ? 
-                            new Date(student.scheduledDate).toLocaleDateString("pt-BR") + ' ' + 
-                            new Date(student.scheduledDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : "";
-                        const evaluatedDate = student.evaluatedDate ? 
-                            new Date(student.evaluatedDate).toLocaleDateString("pt-BR") + ' ' + 
-                            new Date(student.evaluatedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : "";
-                        const completedDate = student.completedDate ? 
-                            new Date(student.completedDate).toLocaleDateString("pt-BR") + ' ' + 
-                            new Date(student.completedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : "";
-                        
-                        csvContent += `${professor},"${student.name}",${status},${addedDate},${scheduledDate},${evaluatedDate},${completedDate}\n`;
-                    });
-                }
-            });
-            
-            // Adicionar resumo estatístico
-            csvContent += "\n";
-            csvContent += "RESUMO ESTATÍSTICO\n";
-            csvContent += "Descrição,Quantidade\n";
-            csvContent += `Total de Alunos,${document.getElementById('totalStudents').textContent}\n`;
-            csvContent += `Pendentes,${document.getElementById('pendingStudents').textContent}\n`;
-            csvContent += `Agendamentos,${document.getElementById('scheduledStudents').textContent}\n`;
-            csvContent += `Avaliações Feitas,${document.getElementById('evaluatedStudents').textContent}\n`;
-            csvContent += `Treinos Entregues,${document.getElementById('completedDeliveries').textContent}\n`;
-            
-            const now = new Date();
-            const monthNames = [
-                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-            ];
-            csvContent += `Mês de Referência,"${monthNames[now.getMonth()]} ${now.getFullYear()}"\n`;
-            csvContent += `Data de Exportação,"${now.toLocaleDateString("pt-BR")} ${now.toLocaleTimeString("pt-BR")}"\n`;
-            
-            const BOM = '\uFEFF';
-            const dataBlob = new Blob([BOM + csvContent], {type: 'text/csv;charset=utf-8'});
-            const url = URL.createObjectURL(dataBlob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `avaliacoes_performance_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}.csv`;
-            link.click();
-            
-            URL.revokeObjectURL(url);
-        }
-
-        // Salvar dados
-        async function saveData() {
-            const dataToSave = {
-                studentsData: studentsData,
-                timestamp: new Date().toISOString()
-            };
-
-            if (isConnected && database) {
-                try {
-                    const dbRef = window.firebaseRef(database, 'academiaPerformance');
-                    await window.firebaseSet(dbRef, dataToSave);
-                    console.log('Dados salvos no Firebase');
-                } catch (error) {
-                    console.error('Erro ao salvar no Firebase:', error);
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-                }
-            } else {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-                console.log('Dados salvos localmente');
-            }
-        }
-
-        // Carregar dados
-        async function loadData() {
-            if (isConnected && database) {
-                try {
-                    const dbRef = window.firebaseRef(database, 'academiaPerformance');
-                    const snapshot = await window.firebaseGet(dbRef);
-                    
-                    if (snapshot.exists()) {
-                        const data = snapshot.val();
-                        if (data && data.studentsData) {
-                            studentsData = data.studentsData;
-                            console.log('Dados carregados do Firebase');
-                        }
-                    }
-                } catch (error) {
-                    console.error('Erro ao carregar do Firebase:', error);
-                    loadLocalData();
-                }
-            } else {
-                loadLocalData();
-            }
-            
-            initializeProfessorsData();
-        }
-
-        function setupRealtimeListener() {
-            if (database && isConnected) {
-                const dbRef = window.firebaseRef(database, 'academiaPerformance');
-                window.firebaseOnValue(dbRef, (snapshot) => {
-                    if (!isInitialized) return;
-                    
-                    if (snapshot.exists()) {
-                        const data = snapshot.val();
-                        if (data && data.studentsData) {
-                            studentsData = data.studentsData;
-                            updateAllStudentsList();
-                            console.log('Dados atualizados em tempo real');
-                        }
-                    }
-                });
-            }
-        }
-
-        async function checkMonthlyCleanup() {
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
-            const currentMonthKey = `${currentYear}-${currentMonth}`;
-            
-            let lastCleanup;
-            
-            if (isConnected && database) {
-                try {
-                    const dbRef = window.firebaseRef(database, 'lastCleanup');
-                    const snapshot = await window.firebaseGet(dbRef);
-                    lastCleanup = snapshot.exists() ? snapshot.val() : null;
-                } catch (error) {
-                    lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
-                }
-            } else {
-                lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
-            }
-            
-            if (lastCleanup !== currentMonthKey) {
-                await performMonthlyCleanup();
-                
-                if (isConnected && database) {
-                    try {
-                        const dbRef = window.firebaseRef(database, 'lastCleanup');
-                        await window.firebaseSet(dbRef, currentMonthKey);
-                    } catch (error) {
-                        localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
-                    }
-                } else {
-                    localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
-                }
-                
-                console.log('Limpeza mensal realizada automaticamente');
-            }
-        }
-
-        // Inicializar aplicação
-        async function initializeApp() {
-            try {
-                showLoadingOverlay();
-                
-                await loadData();
-                await checkMonthlyCleanup();
-                
-                updateCurrentMonth();
-                createProfessorsInterface();
-                setupRealtimeListener();
-                
-                isInitialized = true;
-                
-                console.log('Sistema iniciado com sucesso');
-                
-            } catch (error) {
-                console.error('Erro ao inicializar:', error);
-            } finally {
-                hideLoadingOverlay();
-            }
-        }
-
-        // Aguardar Firebase estar pronto
-        if (database) {
-            initializeApp();
-        } else {
-            setTimeout(initializeApp, 1000);
-        }
-
-        // Salvar dados antes de fechar a página
-        window.addEventListener('beforeunload', async function() {
-            if (isInitialized) {
-                await saveData();
-            }
+            return new Date(a.addedDate) - new Date(b.addedDate);
         });
 
-        // Sincronizar quando voltar online
-        window.addEventListener('online', function() {
-            console.log('Conexão restaurada');
-            if (isInitialized) {
-                loadData().then(() => {
-                    updateAllStudentsList();
-                });
+        sortedStudents.forEach((student, index) => {
+            const originalIndex = studentsData[professor].findIndex(s => s === student);
+            const item = document.createElement('div');
+            item.className = `student-item ${student.status}`;
+            
+            let datesHtml = '';
+            if (student.scheduledDate) {
+                datesHtml += `
+                    <div class="date-row">
+                        <span class="date-label">Agendada:</span>
+                        <span class="date-value">${formatDateTime(student.scheduledDate)}</span>
+                    </div>
+                `;
             }
+            if (student.evaluatedDate) {
+                datesHtml += `
+                    <div class="date-row">
+                        <span class="date-label">Avaliada:</span>
+                        <span class="date-value">${formatDateTime(student.evaluatedDate)}</span>
+                    </div>
+                `;
+            }
+            if (student.completedDate) {
+                datesHtml += `
+                    <div class="date-row">
+                        <span class="date-label">Entregue:</span>
+                        <span class="date-value">${formatDateTime(student.completedDate)}</span>
+                    </div>
+                `;
+            }
+            
+            const statusText = {
+                pending: 'Pendente',
+                scheduled: 'Agendado',
+                evaluated: 'Avaliado',
+                completed: 'Concluído'
+            }[student.status];
+
+            item.innerHTML = `
+                <div class="student-header">
+                    <span class="student-name">${student.name}</span>
+                    <span class="student-status">${statusText}</span>
+                </div>
+                ${datesHtml ? `<div class="student-dates">${datesHtml}</div>` : ''}
+                <div class="action-buttons">
+                    <button class="action-btn schedule-btn" onclick="openDateTimeModal('schedule', '${professor}', ${originalIndex})" ${student.status !== 'pending' ? 'disabled' : ''}>Agendar</button>
+                    <button class="action-btn evaluate-btn" onclick="openDateTimeModal('evaluate', '${professor}', ${originalIndex})" ${student.status !== 'scheduled' ? 'disabled' : ''}>Avaliar</button>
+                    <button class="action-btn deliver-btn" onclick="openDateTimeModal('deliver', '${professor}', ${originalIndex})" ${student.status !== 'evaluated' ? 'disabled' : ''}>Entregar</button>
+                    <button class="remove-btn" onclick="removeStudent('${professor}', ${originalIndex})">Remover</button>
+                </div>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    function formatDateTime(isoString) {
+        if (!isoString) return 'N/A';
+        const date = new Date(isoString);
+        return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    function updateStats() {
+        let total = 0;
+        let scheduled = 0;
+        let evaluated = 0;
+        let completed = 0;
+        let pending = 0;
+
+        professors.forEach(prof => {
+            const students = studentsData[prof] || [];
+            total += students.length;
+            scheduled += students.filter(s => s.status === 'scheduled').length;
+            evaluated += students.filter(s => s.status === 'evaluated').length;
+            completed += students.filter(s => s.status === 'completed').length;
+            pending += students.filter(s => s.status === 'pending').length;
         });
 
-        // Tornar funções globais
-        window.addStudent = addStudent;
-        window.removeStudent = removeStudent;
-        window.scheduleEvaluation = scheduleEvaluation;
-        window.confirmEvaluation = confirmEvaluation;
-        window.confirmDelivery = confirmDelivery;
-        window.confirmDateTime = confirmDateTime;
-        window.cancelDateTime = cancelDateTime;
-        window.resetAllEvaluations = resetAllEvaluations;
-        window.exportData = exportData;
-    </script>
+        document.getElementById('totalStudents').textContent = total;
+        document.getElementById('scheduledStudents').textContent = scheduled;
+        document.getElementById('evaluatedStudents').textContent = evaluated;
+        document.getElementById('completedDeliveries').textContent = completed;
+        document.getElementById('pendingStudents').textContent = pending;
+    }
+
+    async function resetAllEvaluations() {
+        if (!confirm("Tem certeza que deseja resetar todas as avaliações deste mês? Isso removerá todos os alunos com status 'Concluído'.")) {
+            return;
+        }
+
+        professors.forEach(prof => {
+            if (studentsData[prof]) {
+                studentsData[prof] = studentsData[prof].filter(student => student.status !== 'completed');
+            }
+        });
+        
+        await saveData();
+        updateAllStudentsList();
+        updateStats();
+        alert('As avaliações concluídas foram resetadas para este mês!');
+    }
+
+    function exportData() {
+        let csvContent = "Professor,Nome do Aluno,Status,Adicionado em,Agendado,Avaliado,Entregue\n";
+
+        professors.forEach(prof => {
+            const students = studentsData[prof] || [];
+            students.forEach(student => {
+                const addedDate = student.addedDate ? new Date(student.addedDate).toLocaleString('pt-BR') : '';
+                const scheduledDate = student.scheduledDate ? new Date(student.scheduledDate).toLocaleString('pt-BR') : '';
+                const evaluatedDate = student.evaluatedDate ? new Date(student.evaluatedDate).toLocaleString('pt-BR') : '';
+                const completedDate = student.completedDate ? new Date(student.completedDate).toLocaleString('pt-BR') : '';
+                
+                const row = [
+                    prof,
+                    `"${student.name.replace(/"/g, '""')}"`, // Protege contra vírgulas no nome
+                    student.status,
+                    addedDate,
+                    scheduledDate,
+                    evaluatedDate,
+                    completedDate
+                ].join(',');
+                csvContent += row + "\n";
+            });
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "dados_avaliacoes_academia.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    
+    // Função de inicialização principal
+    async function init() {
+        showLoadingOverlay();
+        updateCurrentMonth();
+        await loadData();
+        await checkMonthlyCleanup(); // Executa a limpeza automática após carregar os dados
+        createProfessorsInterface();
+        updateStats();
+        hideLoadingOverlay();
+        isInitialized = true;
+        setupRealtimeListener();
+    }
+
+    // Inicia o sistema
+    init();
+
+    // Eventos para o modal de data/hora
+    window.addEventListener('click', (e) => {
+        const modal = document.getElementById('dateTimeModal');
+        if (e.target === modal) {
+            cancelDateTime();
+        }
+    });
+
+</script>
