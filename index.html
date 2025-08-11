@@ -1026,51 +1026,48 @@
     }
 
     // Confirmar data e hora
-  async function confirmDateTime() {
-  async function confirmDateTime() {
-    const dateInput = document.getElementById('modalDate');
-    const timeInput = document.getElementById('modalTime');
+ async function confirmDateTime() {
+        const dateInput = document.getElementById('modalDate');
+        const timeInput = document.getElementById('modalTime');
 
-    if (!dateInput.value || !timeInput.value) {
-        alert('Por favor, preencha a data e o horário.');
-        return;
-    }
+        if (!dateInput.value || !timeInput.value) {
+            alert('Por favor, preencha a data e o horário.');
+            return;
+        }
 
-    try {
-        // Combina os valores dos inputs diretamente no formato YYYY-MM-DDTHH:mm:ss
-        // Os inputs "date" e "time" já retornam os valores no formato correto para esta operação
-        const dateTimeString = `${dateInput.value}T${timeInput.value}:00`;
-        const dateTime = new Date(dateTimeString);
+        try {
+            // Combina os valores dos inputs diretamente no formato YYYY-MM-DDTHH:mm:ss
+            const dateTimeString = `${dateInput.value}T${timeInput.value}:00`;
+            const dateTime = new Date(dateTimeString);
+            if (isNaN(dateTime.getTime())) {
+                alert('Data ou horário inválido!');
+                console.error('Data string inválida:', dateTimeString);
+                return;
+            }
 
-        if (isNaN(dateTime.getTime())) {
-            alert('Data ou horário inválido!');
-            console.error('Data string inválida:', dateTimeString);
-            return;
-        }
+            const student = studentsData[currentProfessor][currentStudentIndex];
 
-        const student = studentsData[currentProfessor][currentStudentIndex];
+            if (currentModalAction === 'schedule') {
+                student.status = 'scheduled';
+                student.scheduledDate = dateTime.toISOString();
+            } else if (currentModalAction === 'evaluate') {
+                student.status = 'evaluated';
+                student.evaluatedDate = dateTime.toISOString();
+            } else if (currentModalAction === 'deliver') {
+                student.status = 'completed';
+                student.completedDate = dateTime.toISOString();
+            }
 
-        if (currentModalAction === 'schedule') {
-            student.status = 'scheduled';
-            student.scheduledDate = dateTime.toISOString();
-        } else if (currentModalAction === 'evaluate') {
-            student.status = 'evaluated';
-            student.evaluatedDate = dateTime.toISOString();
-        } else if (currentModalAction === 'deliver') {
-            student.status = 'completed';
-            student.completedDate = dateTime.toISOString();
-        }
-
-        cancelDateTime();
-        updateStudentsList(currentProfessor);
-        updateStats();
-        await saveData();
-
-    } catch (error) {
-        console.error('Erro ao processar data/hora:', error);
-        alert('Erro ao processar data ou horário. Verifique o formato.');
-    }
-}
+            await saveData();
+            updateStudentsList(currentProfessor);
+            updateStats();
+            cancelDateTime(); // Fechar o modal
+        } catch (error) {
+            alert('Erro ao processar a data ou horário. Verifique o formato.');
+            console.error('Erro no confirmDateTime:', error);
+            return;
+        }
+    }
 
     // Cancelar modal
     function cancelDateTime() {
@@ -1270,6 +1267,7 @@
     });
 
 </script>
+
 
 
 
