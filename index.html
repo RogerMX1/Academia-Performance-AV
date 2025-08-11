@@ -92,8 +92,9 @@
         }
 
         .stats {
-            display: flex;
-            justify-content: space-around;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
             background: #f8f9fa;
             padding: 20px;
             border-bottom: 2px solid #e9ecef;
@@ -102,6 +103,9 @@
         .stat-item {
             text-align: center;
             padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .stat-number {
@@ -113,8 +117,9 @@
 
         .stat-label {
             color: #6c757d;
-            font-size: 0.9em;
+            font-size: 0.85em;
             margin-top: 5px;
+            font-weight: 500;
         }
 
         .table-container {
@@ -198,99 +203,123 @@
         }
 
         .student-item {
-            display: flex;
-            justify-content: between;
-            align-items: center;
             padding: 15px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             background: white;
             border-radius: 8px;
-            border: 2px solid #dee2e6;
+            border: 1px solid #dee2e6;
             transition: all 0.3s ease;
-            cursor: pointer;
-            flex-direction: column;
-            align-items: flex-start;
+            position: relative;
         }
 
         .student-item:hover {
             transform: translateX(5px);
-        }
-
-        /* Status colors */
-        .student-item.pending {
-            border-color: #dc3545;
-            background: #fff5f5;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
         .student-item.scheduled {
-            border-color: #17a2b8;
-            background: #f0f9ff;
+            border-left: 5px solid #17a2b8;
+            background: #e8f4f8;
         }
 
         .student-item.evaluated {
-            border-color: #ffc107;
-            background: #fffbf0;
+            border-left: 5px solid #ffc107;
+            background: #fff8e1;
         }
 
         .student-item.completed {
-            border-color: #28a745;
-            background: #f0fff4;
-        }
-
-        .student-name {
-            flex: 1;
-            font-weight: 600;
-            color: #000000;
-            width: 100%;
-            font-size: 1.1em;
+            border-left: 5px solid #28a745;
+            background: #e8f5e8;
         }
 
         .student-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            width: 100%;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .student-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #000;
+        }
+
+        .student-item.scheduled .student-name {
+            color: #17a2b8;
+        }
+
+        .student-item.evaluated .student-name {
+            color: #856404;
+        }
+
+        .student-item.completed .student-name {
+            color: #155724;
+        }
+
+        .student-status {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .student-item.pending .student-status {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .student-item.scheduled .student-status {
+            background: #bee5eb;
+            color: #0c5460;
+        }
+
+        .student-item.evaluated .student-status {
+            background: #ffeaa7;
+            color: #6c4a00;
+        }
+
+        .student-item.completed .student-status {
+            background: #c3e6cb;
+            color: #155724;
         }
 
         .student-dates {
             font-size: 12px;
             color: #6c757d;
-            margin-top: 8px;
             line-height: 1.4;
-            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .date-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
         }
 
         .date-label {
             font-weight: bold;
-            margin-right: 5px;
+            margin-right: 8px;
+            min-width: 80px;
         }
 
-        .scheduled-date {
-            color: #17a2b8;
-            font-weight: bold;
-        }
-
-        .evaluated-date {
-            color: #856404;
-            font-weight: bold;
-        }
-
-        .completed-date {
-            color: #155724;
-            font-weight: bold;
+        .date-value {
+            color: #495057;
         }
 
         .action-buttons {
             display: flex;
-            gap: 5px;
-            align-items: center;
+            gap: 6px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
-        .btn {
+        .action-btn {
             padding: 6px 12px;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 11px;
             font-weight: bold;
@@ -298,75 +327,57 @@
             text-transform: uppercase;
         }
 
-        .btn-schedule {
+        /* Botão Agendar */
+        .schedule-btn {
             background: #17a2b8;
             color: white;
         }
 
-        .btn-schedule:hover {
+        .schedule-btn:hover {
             background: #138496;
+            transform: translateY(-1px);
         }
 
-        .btn-confirm-eval {
+        /* Botão Avaliar (Confirmar avaliação) */
+        .evaluate-btn {
             background: #ffc107;
             color: #000;
         }
 
-        .btn-confirm-eval:hover {
+        .evaluate-btn:hover {
             background: #e0a800;
+            transform: translateY(-1px);
         }
 
-        .btn-confirm-delivery {
+        /* Botão Entregar (Confirmar entrega) */
+        .deliver-btn {
             background: #28a745;
             color: white;
         }
 
-        .btn-confirm-delivery:hover {
+        .deliver-btn:hover {
             background: #218838;
+            transform: translateY(-1px);
         }
 
-        .btn:disabled {
-            background: #6c757d;
-            color: #fff;
+        /* Botões desabilitados */
+        .action-btn:disabled {
+            background: #6c757d !important;
+            color: #fff !important;
             cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-left: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .student-item.pending .status-indicator {
-            background: #dc3545;
-        }
-
-        .student-item.scheduled .status-indicator {
-            background: #17a2b8;
-        }
-
-        .student-item.evaluated .status-indicator {
-            background: #ffc107;
-        }
-
-        .student-item.completed .status-indicator {
-            background: #28a745;
+            transform: none !important;
         }
 
         .remove-btn {
             background: #dc3545;
             color: white;
             border: none;
-            padding: 5px 8px;
+            padding: 4px 8px;
             border-radius: 3px;
             cursor: pointer;
             font-size: 12px;
-            margin-left: 8px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            opacity: 0.7;
+            transition: all 0.3s ease;
         }
 
         .student-item:hover .remove-btn {
@@ -375,6 +386,7 @@
 
         .remove-btn:hover {
             background: #c82333;
+            transform: scale(1.1);
         }
 
         .controls {
@@ -572,36 +584,13 @@
             to { transform: translateY(0); opacity: 1; }
         }
 
-        .status-legend {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 12px;
-            color: #6c757d;
-        }
-
-        .legend-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
         @media (max-width: 768px) {
             .professors-grid {
                 grid-template-columns: 1fr;
             }
             
             .stats {
-                flex-direction: column;
-                gap: 10px;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             }
             
             .add-person {
@@ -616,12 +605,6 @@
             
             .header {
                 padding: 20px 15px;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-                gap: 5px;
-                align-items: stretch;
             }
         }
     </style>
@@ -640,7 +623,7 @@
                 <img src="https://i.ibb.co/9m4ypbXf/Imagem-do-Whats-App-de-2025-08-03-s-20-43-13-d5929410.jpg" alt="Academia Performance Logo" class="logo-image">
             </div>
             <h1>Academia Performance</h1>
-            <p>Sistema de Controle de Avaliações</p>
+            <p>Sistema de Controle de Avaliações - 3 Etapas</p>
         </div>
 
         <div class="stats">
@@ -660,33 +643,20 @@
                 <span class="stat-number" id="completedDeliveries">0</span>
                 <div class="stat-label">Treinos Entregues</div>
             </div>
+            <div class="stat-item">
+                <span class="stat-number" id="pendingStudents">0</span>
+                <div class="stat-label">Pendentes</div>
+            </div>
         </div>
 
         <div class="table-container">
             <div class="month-display" id="currentMonth"></div>
             
-            <div class="status-legend">
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #dc3545;"></div>
-                    <span>Pendente</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #17a2b8;"></div>
-                    <span>Agendado</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #ffc107;"></div>
-                    <span>Avaliado</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #28a745;"></div>
-                    <span>Concluído</span>
-                </div>
-            </div>
-            
             <div class="auto-clean-info">
-                🌐 <strong>Sistema 3 Etapas:</strong> 1) Agendar avaliação → 2) Confirmar que foi realizada → 3) Confirmar entrega do treino. 
-                Dados sincronizados automaticamente entre dispositivos.
+                🌐 <strong>Sistema Online - 3 Etapas:</strong><br>
+                <strong>1.</strong> 📅 Agendar avaliação (data/hora planejada)<br>
+                <strong>2.</strong> ✅ Confirmar que foi avaliado (data/hora real)<br>
+                <strong>3.</strong> 📦 Confirmar entrega do treino (data/hora real)
             </div>
             
             <div class="professors-grid" id="professorsGrid">
@@ -700,7 +670,7 @@
         </div>
 
         <div style="text-align: center; padding: 15px; background: #f8f9fa; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 14px; font-style: italic;">
-            BY Roger Medeiros Xavier | Sistema Online v3.0 - 3 Etapas
+            BY Roger Medeiros Xavier | Sistema Online v3.0 - Controle 3 Etapas
         </div>
     </div>
 
@@ -729,25 +699,78 @@
         </div>
     </div>
 
-    <script>
-        // DADOS LOCAIS (sem Firebase para demonstração)
+    <script type="module">
+        // Import Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBHq87y9chjWaWxp9nS9lv8Y3_Ik7zu5Ok",
+            authDomain: "academia-performance-16371.firebaseapp.com",
+            databaseURL: "https://academia-performance-16371-default-rtdb.firebaseio.com",
+            projectId: "academia-performance-16371",
+            storageBucket: "academia-performance-16371.firebasestorage.app",
+            messagingSenderId: "973421564338",
+            appId: "1:973421564338:web:099bcf503d677280f514ab"
+        };
+
+        // Initialize Firebase
+        let app, database, isConnected = false;
+        
+        try {
+            app = initializeApp(firebaseConfig);
+            database = getDatabase(app);
+            
+            // Monitor connection status
+            const connectedRef = ref(database, ".info/connected");
+            onValue(connectedRef, (snap) => {
+                isConnected = snap.val() === true;
+                updateConnectionStatus();
+            });
+            
+            // Make functions globally available
+            window.firebaseApp = app;
+            window.firebaseDB = database;
+            window.firebaseRef = ref;
+            window.firebaseSet = set;
+            window.firebaseGet = get;
+            window.firebaseOnValue = onValue;
+            
+        } catch (error) {
+            console.warn('Firebase não configurado, usando modo offline:', error);
+            isConnected = false;
+            setTimeout(() => {
+                updateConnectionStatus();
+                hideLoadingOverlay();
+                initializeApp();
+            }, 1000);
+        }
+
         const professors = ['Robson', 'Roger', 'Maicon', 'Roberto', 'Naldon', 'Helízia', 'Danielle'];
         let studentsData = {};
         let isInitialized = false;
-        let isConnected = true; // Simulando conexão online
 
-        // Chaves para localStorage
+        // Chaves para fallback local
         const STORAGE_KEY = 'academiaPerformanceData';
         const LAST_CLEANUP_KEY = 'academiaPerformanceLastCleanup';
 
         // Atualizar status de conexão
         function updateConnectionStatus() {
             const statusEl = document.getElementById('connectionStatus');
-            statusEl.textContent = '🟢 Online';
-            statusEl.className = 'connection-status connected';
+            const buttons = document.querySelectorAll('.add-person button, .controls button');
+            
+            if (isConnected && database) {
+                statusEl.textContent = '🟢 Online';
+                statusEl.className = 'connection-status connected';
+                buttons.forEach(btn => btn.disabled = false);
+            } else {
+                statusEl.textContent = '🔴 Offline';
+                statusEl.className = 'connection-status disconnected';
+                buttons.forEach(btn => btn.disabled = false);
+            }
         }
 
-        // Mostrar/ocultar overlay de carregamento
         function showLoadingOverlay() {
             document.getElementById('loadingOverlay').style.display = 'flex';
         }
@@ -756,7 +779,6 @@
             document.getElementById('loadingOverlay').style.display = 'none';
         }
 
-        // Inicializar dados dos professores
         function initializeProfessorsData() {
             professors.forEach(prof => {
                 if (!studentsData[prof]) {
@@ -765,19 +787,48 @@
             });
         }
 
-        // Salvar dados
         async function saveData() {
             const dataToSave = {
                 studentsData: studentsData,
                 timestamp: new Date().toISOString()
             };
 
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-            console.log('Dados salvos localmente');
+            if (isConnected && database) {
+                try {
+                    await database.ref('academiaPerformance').set(dataToSave);
+                    console.log('Dados salvos no Firebase');
+                } catch (error) {
+                    console.error('Erro ao salvar no Firebase:', error);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+                }
+            } else {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+                console.log('Dados salvos localmente');
+            }
         }
 
-        // Carregar dados
         async function loadData() {
+            if (isConnected && database) {
+                try {
+                    const snapshot = await database.ref('academiaPerformance').once('value');
+                    const data = snapshot.val();
+                    
+                    if (data && data.studentsData) {
+                        studentsData = data.studentsData;
+                        console.log('Dados carregados do Firebase');
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar do Firebase:', error);
+                    loadLocalData();
+                }
+            } else {
+                loadLocalData();
+            }
+            
+            initializeProfessorsData();
+        }
+
+        function loadLocalData() {
             try {
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 if (savedData) {
@@ -789,27 +840,59 @@
                 console.error('Erro ao carregar dados locais:', error);
                 studentsData = {};
             }
-            
-            initializeProfessorsData();
         }
 
-        // Verificar e realizar limpeza mensal
+        function setupRealtimeListener() {
+            if (database && isConnected) {
+                database.ref('academiaPerformance').on('value', (snapshot) => {
+                    if (!isInitialized) return;
+                    
+                    const data = snapshot.val();
+                    if (data && data.studentsData) {
+                        studentsData = data.studentsData;
+                        updateAllStudentsList();
+                        console.log('Dados atualizados em tempo real');
+                    }
+                });
+            }
+        }
+
         async function checkMonthlyCleanup() {
             const now = new Date();
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
             const currentMonthKey = `${currentYear}-${currentMonth}`;
             
-            const lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+            let lastCleanup;
+            
+            if (isConnected && database) {
+                try {
+                    const snapshot = await database.ref('lastCleanup').once('value');
+                    lastCleanup = snapshot.val();
+                } catch (error) {
+                    lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+                }
+            } else {
+                lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+            }
             
             if (lastCleanup !== currentMonthKey) {
                 await performMonthlyCleanup();
-                localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
+                
+                if (isConnected && database) {
+                    try {
+                        await database.ref('lastCleanup').set(currentMonthKey);
+                    } catch (error) {
+                        localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
+                    }
+                } else {
+                    localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
+                }
+                
                 console.log('Limpeza mensal realizada automaticamente');
             }
         }
 
-        // Realizar limpeza mensal
         async function performMonthlyCleanup() {
             professors.forEach(prof => {
                 if (studentsData[prof]) {
@@ -821,7 +904,6 @@
             await saveData();
         }
 
-        // Exibir mês atual
         function updateCurrentMonth() {
             const now = new Date();
             const monthNames = [
@@ -832,7 +914,6 @@
                 `Controle de Avaliações - ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
         }
 
-        // Criar interface dos professores
         function createProfessorsInterface() {
             const container = document.getElementById('professorsGrid');
             container.innerHTML = '';
@@ -854,7 +935,6 @@
                 `;
                 container.appendChild(column);
 
-                // Adicionar evento Enter no input
                 const input = column.querySelector(`#input-${professor}`);
                 input.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
@@ -866,7 +946,6 @@
             updateAllStudentsList();
         }
 
-        // Adicionar aluno
         async function addStudent(professor) {
             const input = document.getElementById(`input-${professor}`);
             const studentName = input.value.trim();
@@ -874,11 +953,11 @@
             if (studentName) {
                 const student = {
                     name: studentName,
-                    status: 'pending', // pending -> scheduled -> evaluated -> completed
+                    status: 'pending', // pending, scheduled, evaluated, completed
                     addedDate: new Date().toISOString(),
-                    scheduledDate: null,
-                    evaluatedDate: null,
-                    completedDate: null
+                    scheduledDate: null,    // Data/hora AGENDADA para avaliação
+                    evaluatedDate: null,    // Data/hora REAL que foi avaliado
+                    completedDate: null     // Data/hora REAL que foi entregue
                 };
                 
                 studentsData[professor].push(student);
@@ -889,7 +968,6 @@
             }
         }
 
-        // Remover aluno
         async function removeStudent(professor, index) {
             if (confirm('Tem certeza que deseja remover este aluno?')) {
                 studentsData[professor].splice(index, 1);
@@ -913,13 +991,13 @@
             const timeInput = document.getElementById('modalTime');
             
             if (action === 'schedule') {
-                title.textContent = 'Agendar Avaliação';
+                title.textContent = '📅 Agendar Avaliação';
                 subtitle.textContent = `Para: ${studentName}`;
-            } else if (action === 'confirm-eval') {
-                title.textContent = 'Confirmar Avaliação Realizada';
-                subtitle.textContent = `Para: ${studentName}`;
-            } else if (action === 'confirm-delivery') {
-                title.textContent = 'Confirmar Entrega do Treino';
+            } else if (action === 'evaluate') {
+                title.textContent = '✅ Confirmar Avaliação Realizada';
+                subtitle.textContent = `Aluno: ${studentName}`;
+            } else if (action === 'deliver') {
+                title.textContent = '📦 Confirmar Entrega do Treino';
                 subtitle.textContent = `Para: ${studentName}`;
             }
             
@@ -955,33 +1033,24 @@
                 
                 const student = studentsData[currentProfessor][currentStudentIndex];
                 
-                // Atualizar status baseado na ação atual
-                if (currentModalAction === 'schedule') {
+                if (currentModalAction === 'schedule' && student.status === 'pending') {
                     student.status = 'scheduled';
                     student.scheduledDate = dateTime.toISOString();
-                    console.log('Agendamento realizado:', student.name);
-                } else if (currentModalAction === 'confirm-eval') {
+                } else if (currentModalAction === 'evaluate' && student.status === 'scheduled') {
                     student.status = 'evaluated';
                     student.evaluatedDate = dateTime.toISOString();
-                    console.log('Avaliação confirmada:', student.name);
-                } else if (currentModalAction === 'confirm-delivery') {
+                } else if (currentModalAction === 'deliver' && student.status === 'evaluated') {
                     student.status = 'completed';
                     student.completedDate = dateTime.toISOString();
-                    console.log('Entrega confirmada:', student.name);
                 }
                 
-                // Forçar atualização da interface
                 updateStudentsList(currentProfessor);
                 updateStats();
                 await saveData();
                 
                 cancelDateTime();
                 
-                // Feedback visual
-                console.log('Status atualizado para:', student.status);
-                
             } catch (error) {
-                console.error('Erro ao processar data e horário:', error);
                 alert('Erro ao processar data e horário. Tente novamente.');
             }
         }
@@ -1003,38 +1072,27 @@
             }
         }
 
-        // FUNÇÕES DAS 3 ETAPAS
-
-        // 1. Agendar avaliação
+        // 1ª ETAPA: Agendar avaliação
         function scheduleEvaluation(professor, index) {
             const student = studentsData[professor][index];
-            console.log('Tentando agendar para:', student.name, 'Status atual:', student.status);
             if (student.status === 'pending') {
                 openDateTimeModal('schedule', professor, index, student.name);
-            } else {
-                console.log('Status não permite agendamento');
             }
         }
 
-        // 2. Confirmar que a avaliação foi realizada
+        // 2ª ETAPA: Confirmar que avaliação foi realizada
         function confirmEvaluation(professor, index) {
             const student = studentsData[professor][index];
-            console.log('Tentando confirmar avaliação para:', student.name, 'Status atual:', student.status);
             if (student.status === 'scheduled') {
-                openDateTimeModal('confirm-eval', professor, index, student.name);
-            } else {
-                console.log('Status não permite confirmação de avaliação');
+                openDateTimeModal('evaluate', professor, index, student.name);
             }
         }
 
-        // 3. Confirmar que o treino foi entregue
+        // 3ª ETAPA: Confirmar entrega do treino
         function confirmDelivery(professor, index) {
             const student = studentsData[professor][index];
-            console.log('Tentando confirmar entrega para:', student.name, 'Status atual:', student.status);
             if (student.status === 'evaluated') {
-                openDateTimeModal('confirm-delivery', professor, index, student.name);
-            } else {
-                console.log('Status não permite confirmação de entrega');
+                openDateTimeModal('deliver', professor, index, student.name);
             }
         }
 
@@ -1043,96 +1101,117 @@
             const container = document.getElementById(`students-${professor}`);
             const students = studentsData[professor];
             
-            if (!container || !students) {
-                console.error('Container ou students não encontrados para:', professor);
-                return;
-            }
-            
             container.innerHTML = '';
             
             students.forEach((student, index) => {
                 const item = document.createElement('div');
                 item.className = `student-item ${student.status}`;
                 
-                console.log(`Renderizando ${student.name} com status: ${student.status}`);
-                
-                // Formatação das datas
+                // Formatar datas
                 const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
                 
-                const scheduledDate = student.scheduledDate ? 
-                    new Date(student.scheduledDate).toLocaleDateString("pt-BR") + ' às ' + 
-                    new Date(student.scheduledDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
+                let scheduledDate = null;
+                if (student.scheduledDate) {
+                    const date = new Date(student.scheduledDate);
+                    scheduledDate = date.toLocaleDateString("pt-BR") + ' às ' + 
+                        date.toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'});
+                }
                 
-                const evaluatedDate = student.evaluatedDate ? 
-                    new Date(student.evaluatedDate).toLocaleDateString("pt-BR") + ' às ' + 
-                    new Date(student.evaluatedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
+                let evaluatedDate = null;
+                if (student.evaluatedDate) {
+                    const date = new Date(student.evaluatedDate);
+                    evaluatedDate = date.toLocaleDateString("pt-BR") + ' às ' + 
+                        date.toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'});
+                }
                 
-                const completedDate = student.completedDate ? 
-                    new Date(student.completedDate).toLocaleDateString("pt-BR") + ' às ' + 
-                    new Date(student.completedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : null;
+                let completedDate = null;
+                if (student.completedDate) {
+                    const date = new Date(student.completedDate);
+                    completedDate = date.toLocaleDateString("pt-BR") + ' às ' + 
+                        date.toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'});
+                }
+                
+                // Status text
+                let statusText = '';
+                switch(student.status) {
+                    case 'pending': statusText = 'Pendente'; break;
+                    case 'scheduled': statusText = 'Agendado'; break;
+                    case 'evaluated': statusText = 'Avaliado'; break;
+                    case 'completed': statusText = 'Concluído'; break;
+                }
                 
                 // Montar HTML das datas
-                let datesHTML = `<span class="date-label">Adicionado:</span>${addedDate}`;
+                let datesHTML = `
+                    <div class="date-row">
+                        <span class="date-label">Adicionado:</span>
+                        <span class="date-value">${addedDate}</span>
+                    </div>
+                `;
                 
                 if (scheduledDate) {
-                    datesHTML += `<br><span class="date-label">📅 Agendado para:</span><span class="scheduled-date">${scheduledDate}</span>`;
+                    datesHTML += `
+                        <div class="date-row">
+                            <span class="date-label">📅 Agendado:</span>
+                            <span class="date-value">${scheduledDate}</span>
+                        </div>
+                    `;
                 }
                 
                 if (evaluatedDate) {
-                    datesHTML += `<br><span class="date-label">✅ Avaliado em:</span><span class="evaluated-date">${evaluatedDate}</span>`;
+                    datesHTML += `
+                        <div class="date-row">
+                            <span class="date-label">✅ Avaliado:</span>
+                            <span class="date-value">${evaluatedDate}</span>
+                        </div>
+                    `;
                 }
                 
                 if (completedDate) {
-                    datesHTML += `<br><span class="date-label">📋 Entregue em:</span><span class="completed-date">${completedDate}</span>`;
+                    datesHTML += `
+                        <div class="date-row">
+                            <span class="date-label">📦 Entregue:</span>
+                            <span class="date-value">${completedDate}</span>
+                        </div>
+                    `;
                 }
                 
-                // Botões baseados no status - CORRIGIDO
+                // Botões baseados no status
                 let buttonsHTML = '';
-                
-                switch(student.status) {
-                    case 'pending':
-                        buttonsHTML = `<button class="btn btn-schedule" onclick="scheduleEvaluation('${professor}', ${index})">📅 Agendar</button>`;
-                        break;
-                    case 'scheduled':
-                        buttonsHTML = `
-                            <button class="btn btn-schedule" disabled>📅 Agendado</button>
-                            <button class="btn btn-confirm-eval" onclick="confirmEvaluation('${professor}', ${index})">✅ Confirmar Avaliação</button>
-                        `;
-                        break;
-                    case 'evaluated':
-                        buttonsHTML = `
-                            <button class="btn btn-schedule" disabled>📅 Agendado</button>
-                            <button class="btn btn-confirm-eval" disabled>✅ Avaliado</button>
-                            <button class="btn btn-confirm-delivery" onclick="confirmDelivery('${professor}', ${index})">📋 Confirmar Entrega</button>
-                        `;
-                        break;
-                    case 'completed':
-                        buttonsHTML = `
-                            <button class="btn btn-schedule" disabled>📅 Agendado</button>
-                            <button class="btn btn-confirm-eval" disabled>✅ Avaliado</button>
-                            <button class="btn btn-confirm-delivery" disabled>📋 Entregue</button>
-                        `;
-                        break;
-                    default:
-                        buttonsHTML = `<button class="btn btn-schedule" onclick="scheduleEvaluation('${professor}', ${index})">📅 Agendar</button>`;
+                if (student.status === 'pending') {
+                    buttonsHTML = `<button class="action-btn schedule-btn" onclick="scheduleEvaluation('${professor}', ${index})">📅 Agendar</button>`;
+                } else if (student.status === 'scheduled') {
+                    buttonsHTML = `
+                        <button class="action-btn schedule-btn" disabled>📅 Agendado</button>
+                        <button class="action-btn evaluate-btn" onclick="confirmEvaluation('${professor}', ${index})">✅ Avaliar</button>
+                    `;
+                } else if (student.status === 'evaluated') {
+                    buttonsHTML = `
+                        <button class="action-btn schedule-btn" disabled>📅 Agendado</button>
+                        <button class="action-btn evaluate-btn" disabled>✅ Avaliado</button>
+                        <button class="action-btn deliver-btn" onclick="confirmDelivery('${professor}', ${index})">📦 Entregar</button>
+                    `;
+                } else if (student.status === 'completed') {
+                    buttonsHTML = `
+                        <button class="action-btn schedule-btn" disabled>📅 Agendado</button>
+                        <button class="action-btn evaluate-btn" disabled>✅ Avaliado</button>
+                        <button class="action-btn deliver-btn" disabled>📦 Entregue</button>
+                    `;
                 }
                 
                 item.innerHTML = `
                     <div class="student-header">
                         <div class="student-name">${student.name}</div>
-                        <div class="action-buttons">
-                            ${buttonsHTML}
-                            <div class="status-indicator"></div>
-                            <button class="remove-btn" onclick="removeStudent('${professor}', ${index})">×</button>
-                        </div>
+                        <div class="student-status">${statusText}</div>
                     </div>
                     <div class="student-dates">${datesHTML}</div>
+                    <div class="action-buttons">
+                        ${buttonsHTML}
+                        <button class="remove-btn" onclick="removeStudent('${professor}', ${index})">×</button>
+                    </div>
                 `;
                 
                 container.appendChild(item);
             });
-            
-            console.log(`Lista atualizada para ${professor} com ${students.length} alunos`);
         }
 
         // Atualizar todas as listas
@@ -1147,19 +1226,27 @@
             let scheduledStudents = 0;
             let evaluatedStudents = 0;
             let completedDeliveries = 0;
+            let pendingStudents = 0;
 
             professors.forEach(prof => {
                 const students = studentsData[prof];
                 totalStudents += students.length;
-                scheduledStudents += students.filter(s => s.status === 'scheduled').length;
-                evaluatedStudents += students.filter(s => s.status === 'evaluated').length;
-                completedDeliveries += students.filter(s => s.status === 'completed').length;
+                
+                students.forEach(student => {
+                    switch(student.status) {
+                        case 'pending': pendingStudents++; break;
+                        case 'scheduled': scheduledStudents++; break;
+                        case 'evaluated': evaluatedStudents++; break;
+                        case 'completed': completedDeliveries++; break;
+                    }
+                });
             });
 
             document.getElementById('totalStudents').textContent = totalStudents;
             document.getElementById('scheduledStudents').textContent = scheduledStudents;
             document.getElementById('evaluatedStudents').textContent = evaluatedStudents;
             document.getElementById('completedDeliveries').textContent = completedDeliveries;
+            document.getElementById('pendingStudents').textContent = pendingStudents;
         }
 
         // Resetar todas as avaliações
@@ -1184,14 +1271,16 @@
             
             professors.forEach(professor => {
                 if (studentsData[professor].length === 0) {
-                    csvContent += `${professor},Nenhum aluno cadastrado,,,,,\n`;
+                    csvContent += `${professor},Nenhum aluno cadastrado,,,,,,\n`;
                 } else {
                     studentsData[professor].forEach(student => {
                         let status = '';
-                        if (student.status === 'pending') status = 'Pendente';
-                        else if (student.status === 'scheduled') status = 'Agendado';
-                        else if (student.status === 'evaluated') status = 'Avaliado';
-                        else if (student.status === 'completed') status = 'Concluído';
+                        switch(student.status) {
+                            case 'pending': status = 'Pendente'; break;
+                            case 'scheduled': status = 'Agendado'; break;
+                            case 'evaluated': status = 'Avaliado'; break;
+                            case 'completed': status = 'Concluído'; break;
+                        }
                         
                         const addedDate = new Date(student.addedDate).toLocaleDateString("pt-BR");
                         const scheduledDate = student.scheduledDate ? 
@@ -1203,8 +1292,8 @@
                         const completedDate = student.completedDate ? 
                             new Date(student.completedDate).toLocaleDateString("pt-BR") + ' ' + 
                             new Date(student.completedDate).toLocaleTimeString("pt-BR", {hour: '2-digit', minute: '2-digit'}) : "";
-                            
-                        csvContent += `${professor},"${student.name}",${status},${addedDate},"${scheduledDate}","${evaluatedDate}","${completedDate}"\n`;
+                        
+                        csvContent += `${professor},"${student.name}",${status},${addedDate},${scheduledDate},${evaluatedDate},${completedDate}\n`;
                     });
                 }
             });
@@ -1214,6 +1303,7 @@
             csvContent += "RESUMO ESTATÍSTICO\n";
             csvContent += "Descrição,Quantidade\n";
             csvContent += `Total de Alunos,${document.getElementById('totalStudents').textContent}\n`;
+            csvContent += `Pendentes,${document.getElementById('pendingStudents').textContent}\n`;
             csvContent += `Agendamentos,${document.getElementById('scheduledStudents').textContent}\n`;
             csvContent += `Avaliações Feitas,${document.getElementById('evaluatedStudents').textContent}\n`;
             csvContent += `Treinos Entregues,${document.getElementById('completedDeliveries').textContent}\n`;
@@ -1232,10 +1322,113 @@
             
             const link = document.createElement('a');
             link.href = url;
-            link.download = `avaliacoes_performance_3etapas_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}.csv`;
+            link.download = `avaliacoes_performance_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}.csv`;
             link.click();
             
             URL.revokeObjectURL(url);
+        }
+
+        // Salvar dados
+        async function saveData() {
+            const dataToSave = {
+                studentsData: studentsData,
+                timestamp: new Date().toISOString()
+            };
+
+            if (isConnected && database) {
+                try {
+                    const dbRef = window.firebaseRef(database, 'academiaPerformance');
+                    await window.firebaseSet(dbRef, dataToSave);
+                    console.log('Dados salvos no Firebase');
+                } catch (error) {
+                    console.error('Erro ao salvar no Firebase:', error);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+                }
+            } else {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+                console.log('Dados salvos localmente');
+            }
+        }
+
+        // Carregar dados
+        async function loadData() {
+            if (isConnected && database) {
+                try {
+                    const dbRef = window.firebaseRef(database, 'academiaPerformance');
+                    const snapshot = await window.firebaseGet(dbRef);
+                    
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        if (data && data.studentsData) {
+                            studentsData = data.studentsData;
+                            console.log('Dados carregados do Firebase');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar do Firebase:', error);
+                    loadLocalData();
+                }
+            } else {
+                loadLocalData();
+            }
+            
+            initializeProfessorsData();
+        }
+
+        function setupRealtimeListener() {
+            if (database && isConnected) {
+                const dbRef = window.firebaseRef(database, 'academiaPerformance');
+                window.firebaseOnValue(dbRef, (snapshot) => {
+                    if (!isInitialized) return;
+                    
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        if (data && data.studentsData) {
+                            studentsData = data.studentsData;
+                            updateAllStudentsList();
+                            console.log('Dados atualizados em tempo real');
+                        }
+                    }
+                });
+            }
+        }
+
+        async function checkMonthlyCleanup() {
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            const currentMonthKey = `${currentYear}-${currentMonth}`;
+            
+            let lastCleanup;
+            
+            if (isConnected && database) {
+                try {
+                    const dbRef = window.firebaseRef(database, 'lastCleanup');
+                    const snapshot = await window.firebaseGet(dbRef);
+                    lastCleanup = snapshot.exists() ? snapshot.val() : null;
+                } catch (error) {
+                    lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+                }
+            } else {
+                lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
+            }
+            
+            if (lastCleanup !== currentMonthKey) {
+                await performMonthlyCleanup();
+                
+                if (isConnected && database) {
+                    try {
+                        const dbRef = window.firebaseRef(database, 'lastCleanup');
+                        await window.firebaseSet(dbRef, currentMonthKey);
+                    } catch (error) {
+                        localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
+                    }
+                } else {
+                    localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
+                }
+                
+                console.log('Limpeza mensal realizada automaticamente');
+            }
         }
 
         // Inicializar aplicação
@@ -1243,16 +1436,12 @@
             try {
                 showLoadingOverlay();
                 
-                // Carregar dados
                 await loadData();
-                
-                // Verificar limpeza mensal
                 await checkMonthlyCleanup();
                 
-                // Atualizar interface
-                updateConnectionStatus();
                 updateCurrentMonth();
                 createProfessorsInterface();
+                setupRealtimeListener();
                 
                 isInitialized = true;
                 
@@ -1265,8 +1454,12 @@
             }
         }
 
-        // Inicializar aplicação
-        setTimeout(initializeApp, 1000);
+        // Aguardar Firebase estar pronto
+        if (database) {
+            initializeApp();
+        } else {
+            setTimeout(initializeApp, 1000);
+        }
 
         // Salvar dados antes de fechar a página
         window.addEventListener('beforeunload', async function() {
@@ -1275,61 +1468,24 @@
             }
         });
 
-        // Atalhos do teclado
-        document.addEventListener('keydown', function(e) {
-            // ESC para fechar modal
-            if (e.key === 'Escape') {
-                cancelDateTime();
+        // Sincronizar quando voltar online
+        window.addEventListener('online', function() {
+            console.log('Conexão restaurada');
+            if (isInitialized) {
+                loadData().then(() => {
+                    updateAllStudentsList();
+                });
             }
         });
+
+        // Tornar funções globais
+        window.addStudent = addStudent;
+        window.removeStudent = removeStudent;
+        window.scheduleEvaluation = scheduleEvaluation;
+        window.confirmEvaluation = confirmEvaluation;
+        window.confirmDelivery = confirmDelivery;
+        window.confirmDateTime = confirmDateTime;
+        window.cancelDateTime = cancelDateTime;
+        window.resetAllEvaluations = resetAllEvaluations;
+        window.exportData = exportData;
     </script>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-  import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-  // Configuração do Firebase (use sua configuração)
-  const firebaseConfig = {
-    apiKey: "AIzaSyBHq87y9chjWaWxp9nS9lv8Y3_Ik7zu5Ok",
-    authDomain: "academia-performance-16371.firebaseapp.com",
-    databaseURL: "https://academia-performance-16371-default-rtdb.firebaseio.com",
-    projectId: "academia-performance-16371",
-    storageBucket: "academia-performance-16371.firebasestorage.app",
-    messagingSenderId: "973421564338",
-    appId: "1:973421564338:web:099bcf503d677280f514ab"
-  };
-
-  // Inicialize o Firebase
-  const app = initializeApp(firebaseConfig);
-
-  // Inicialize Firestore (para dados estruturados)
-  const db = getFirestore(app);
-
-  // Inicialize Realtime Database (para dados em tempo real)
-  const realtimeDb = getDatabase(app);
-
-  // Exemplo: Salvar dados no Firestore
-  window.salvarAluno = async (nome, idade, plano) => {
-    try {
-      await addDoc(collection(db, "alunos"), { nome, idade, plano });
-      console.log("Aluno salvo no Firestore!");
-    } catch (error) {
-      console.error("Erro ao salvar:", error);
-    }
-  };
-
-  // Exemplo: Salvar dados no Realtime Database
-  window.salvarTreino = async (alunoId, treino) => {
-    try {
-      await set(ref(realtimeDb, `treinos/${alunoId}`), treino);
-      console.log("Treino salvo no Realtime DB!");
-    } catch (error) {
-      console.error("Erro ao salvar:", error);
-    }
-  };
-</script>
-</body>
-</html>
-
-
-
