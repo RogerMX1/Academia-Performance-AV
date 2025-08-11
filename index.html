@@ -1026,7 +1026,7 @@
     }
 
     // Confirmar data e hora
-   async function confirmDateTime() {
+  async function confirmDateTime() {
     const dateInput = document.getElementById('modalDate');
     const timeInput = document.getElementById('modalTime');
     
@@ -1036,25 +1036,37 @@
     }
     
     try {
-        const dateTimeString = `${dateInput.value}T${timeInput.value}:00`;
-        const dateTime = new Date(dateTimeString);
+        let dateValue = dateInput.value;
         
-        if (isNaN(dateTime.getTime())) {
-            alert('Data ou horário inválido!');
-            return;
+        // Verifica se a data está no formato dd/mm/yyyy e converte para yyyy-mm-dd
+        // Isso resolve o problema de localidade do navegador
+        if (dateValue.includes('/')) {
+            const parts = dateValue.split('/');
+            if (parts.length === 3) {
+                dateValue = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
         }
         
+        const dateTimeString = `${dateValue}T${timeInput.value}:00`;
+        const dateTime = new Date(dateTimeString);
+
+        if (isNaN(dateTime.getTime())) {
+            alert('Data ou horário inválido!');
+            console.error('Data string inválida:', dateTimeString);
+            return;
+        }
+
         const student = studentsData[currentProfessor][currentStudentIndex];
         
         if (currentModalAction === 'schedule') {
             student.status = 'scheduled';
-            student.scheduledDate = dateTime.toISOString(); // Armazena a data em formato ISO
+            student.scheduledDate = dateTime.toISOString();
         } else if (currentModalAction === 'evaluate') {
             student.status = 'evaluated';
-            student.evaluatedDate = dateTime.toISOString(); // Armazena a data em formato ISO
+            student.evaluatedDate = dateTime.toISOString();
         } else if (currentModalAction === 'deliver') {
             student.status = 'completed';
-            student.completedDate = dateTime.toISOString(); // Armazena a data em formato ISO
+            student.completedDate = dateTime.toISOString();
         }
         
         cancelDateTime();
@@ -1266,4 +1278,5 @@
     });
 
 </script>
+
 
