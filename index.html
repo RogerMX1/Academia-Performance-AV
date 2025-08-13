@@ -158,6 +158,81 @@
             border: 2px solid #FFD700;
         }
 
+        /* Novo: Indicador de limites */
+        .limits-indicator {
+            background: #fff;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #dee2e6;
+        }
+
+        .limits-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .limits-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .limit-label {
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .limit-progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .limit-bar {
+            width: 60px;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .limit-fill {
+            height: 100%;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .limit-fill.safe {
+            background: #28a745;
+        }
+
+        .limit-fill.warning {
+            background: #ffc107;
+        }
+
+        .limit-fill.danger {
+            background: #dc3545;
+        }
+
+        .limit-text {
+            font-weight: bold;
+            min-width: 35px;
+        }
+
+        .limit-text.safe {
+            color: #28a745;
+        }
+
+        .limit-text.warning {
+            color: #856404;
+        }
+
+        .limit-text.danger {
+            color: #721c24;
+        }
+
         .add-person {
             display: flex;
             gap: 10px;
@@ -196,6 +271,60 @@
         .add-person button:disabled {
             background: #ccc;
             cursor: not-allowed;
+        }
+
+        /* Alertas de conflito de horário */
+        .conflict-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .conflict-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .time-suggestions {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .suggestion-times {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .suggestion-time {
+            background: #17a2b8;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .suggestion-time:hover {
+            background: #138496;
         }
 
         .students-list {
@@ -442,6 +571,18 @@
             font-size: 14px;
         }
 
+        /* Nova seção de informações de limites */
+        .limits-info {
+            background: #f0f8ff;
+            border: 1px solid #4a90e2;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #2c5aa0;
+            font-size: 14px;
+        }
+
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -623,7 +764,7 @@
                 <img src="https://i.ibb.co/9m4ypbXf/Imagem-do-Whats-App-de-2025-08-03-s-20-43-13-d5929410.jpg" alt="Academia Performance Logo" class="logo-image">
             </div>
             <h1>Academia Performance</h1>
-            <p>Sistema de Controle de Avaliações - 3 Etapas</p>
+            <p>Sistema de Controle de Avaliações - 3 Etapas com Limites</p>
         </div>
 
         <div class="stats">
@@ -658,6 +799,11 @@
                 <strong>2.</strong> ✅ Confirmar que foi avaliado (data/hora real)<br>
                 <strong>3.</strong> 📦 Confirmar entrega do treino (data/hora real)
             </div>
+
+            <div class="limits-info">
+                📊 <strong>Controle de Limites:</strong> Máximo 3 avaliações por dia | 12 avaliações por semana por professor<br>
+                <small>Os limites são calculados baseados na data dos agendamentos</small>
+            </div>
             
             <div class="professors-grid" id="professorsGrid">
                 <!-- Colunas dos professores serão geradas aqui -->
@@ -670,7 +816,7 @@
         </div>
 
         <div style="text-align: center; padding: 15px; background: #f8f9fa; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 14px; font-style: italic;">
-            BY Roger Medeiros Xavier | Sistema Online v3.0 - Controle 3 Etapas
+            BY Roger Medeiros Xavier | Sistema Online v3.2 - Controle 3 Etapas com Limites e Intervalos
         </div>
     </div>
 
@@ -690,6 +836,7 @@
             <div class="form-group">
                 <label for="modalTime">Horário:</label>
                 <input type="time" id="modalTime" required>
+                <div id="timeConflictAlert" style="display: none;"></div>
             </div>
             
             <div class="modal-buttons">
@@ -762,6 +909,10 @@
     const STORAGE_KEY = 'academiaPerformanceData';
     const LAST_CLEANUP_KEY = 'academiaPerformanceLastCleanup';
 
+    // Limites por professor
+    const DAILY_LIMIT = 3;
+    const WEEKLY_LIMIT = 12;
+
     // Atualizar status de conexão
     function updateConnectionStatus() {
         const statusEl = document.getElementById('connectionStatus');
@@ -792,6 +943,228 @@
                 studentsData[prof] = [];
             }
         });
+    }
+
+    // Função para calcular limites de um professor
+    function calculateProfessorLimits(professor) {
+        const students = studentsData[professor] || [];
+        const now = new Date();
+        
+        // Calcula início da semana (domingo)
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        // Data de hoje
+        const today = new Date(now);
+        today.setHours(0, 0, 0, 0);
+        
+        // Contar agendamentos para hoje
+        const todayCount = students.filter(student => {
+            if (!student.scheduledDate) return false;
+            const scheduledDate = new Date(student.scheduledDate);
+            scheduledDate.setHours(0, 0, 0, 0);
+            return scheduledDate.getTime() === today.getTime();
+        }).length;
+        
+        // Contar agendamentos para esta semana
+        const weekCount = students.filter(student => {
+            if (!student.scheduledDate) return false;
+            const scheduledDate = new Date(student.scheduledDate);
+            return scheduledDate >= startOfWeek && scheduledDate <= now;
+        }).length;
+        
+        return {
+            dailyUsed: todayCount,
+            dailyLimit: DAILY_LIMIT,
+            dailyRemaining: Math.max(0, DAILY_LIMIT - todayCount),
+            weeklyUsed: weekCount,
+            weeklyLimit: WEEKLY_LIMIT,
+            weeklyRemaining: Math.max(0, WEEKLY_LIMIT - weekCount),
+            canScheduleToday: todayCount < DAILY_LIMIT,
+            canScheduleThisWeek: weekCount < WEEKLY_LIMIT
+        };
+    }
+
+    // Verificar se um professor pode agendar em uma data específica
+    function canProfessorScheduleOnDate(professor, targetDate) {
+        const students = studentsData[professor] || [];
+        const target = new Date(targetDate);
+        target.setHours(0, 0, 0, 0);
+        
+        // Calcula início da semana da data alvo
+        const startOfWeek = new Date(target);
+        startOfWeek.setDate(target.getDate() - target.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        
+        // Contar agendamentos para o dia específico
+        const dayCount = students.filter(student => {
+            if (!student.scheduledDate) return false;
+            const scheduledDate = new Date(student.scheduledDate);
+            scheduledDate.setHours(0, 0, 0, 0);
+            return scheduledDate.getTime() === target.getTime();
+        }).length;
+        
+        // Contar agendamentos para a semana da data alvo
+        const weekCount = students.filter(student => {
+            if (!student.scheduledDate) return false;
+            const scheduledDate = new Date(student.scheduledDate);
+            return scheduledDate >= startOfWeek && scheduledDate <= endOfWeek;
+        }).length;
+        
+        return {
+            canSchedule: dayCount < DAILY_LIMIT && weekCount < WEEKLY_LIMIT,
+            dayCount: dayCount,
+            weekCount: weekCount,
+            dailyExceeded: dayCount >= DAILY_LIMIT,
+            weeklyExceeded: weekCount >= WEEKLY_LIMIT
+        };
+    }
+
+    // Verificar conflitos de horário (intervalo mínimo de 40 minutos)
+    function checkTimeConflicts(professor, targetDateTime, excludeIndex = -1) {
+        const students = studentsData[professor] || [];
+        const MINIMUM_INTERVAL_MS = 40 * 60 * 1000; // 40 minutos em milliseconds
+        const targetTime = new Date(targetDateTime);
+        
+        const conflicts = [];
+        
+        students.forEach((student, index) => {
+            if (index === excludeIndex || !student.scheduledDate) return;
+            
+            const scheduledTime = new Date(student.scheduledDate);
+            const timeDiff = Math.abs(targetTime - scheduledTime);
+            
+            if (timeDiff < MINIMUM_INTERVAL_MS) {
+                const diffMinutes = Math.floor(timeDiff / (60 * 1000));
+                conflicts.push({
+                    student: student,
+                    scheduledTime: scheduledTime,
+                    timeDifference: diffMinutes,
+                    index: index
+                });
+            }
+        });
+        
+        return {
+            hasConflicts: conflicts.length > 0,
+            conflicts: conflicts,
+            minimumInterval: 40
+        };
+    }
+
+    // Função para sugerir horários disponíveis
+    function suggestAvailableTimes(professor, targetDate) {
+        const students = studentsData[professor] || [];
+        const suggestions = [];
+        const date = new Date(targetDate);
+        
+        // Buscar todos os agendamentos do dia
+        const daySchedules = students
+            .filter(s => s.scheduledDate)
+            .map(s => new Date(s.scheduledDate))
+            .filter(d => {
+                const scheduleDate = new Date(d);
+                scheduleDate.setHours(0, 0, 0, 0);
+                const targetDateOnly = new Date(date);
+                targetDateOnly.setHours(0, 0, 0, 0);
+                return scheduleDate.getTime() === targetDateOnly.getTime();
+            })
+            .sort((a, b) => a - b);
+        
+        // Horário de funcionamento: 6:00 às 22:00
+        const startHour = 6;
+        const endHour = 22;
+        
+        for (let hour = startHour; hour < endHour; hour++) {
+            for (let minute = 0; minute < 60; minute += 30) { // Intervalos de 30 minutos
+                const testTime = new Date(date);
+                testTime.setHours(hour, minute, 0, 0);
+                
+                const conflict = checkTimeConflicts(professor, testTime);
+                if (!conflict.hasConflicts) {
+                    suggestions.push({
+                        time: testTime,
+                        formatted: testTime.toTimeString().slice(0, 5)
+                    });
+                }
+                
+                if (suggestions.length >= 10) break; // Limitar sugestões
+            }
+            if (suggestions.length >= 10) break;
+        }
+        
+        return suggestions.slice(0, 5); // Retornar apenas as 5 primeiras sugestões
+    }
+
+    // Função para criar o indicador visual de limites
+    function createLimitsIndicator(professor) {
+        const limits = calculateProfessorLimits(professor);
+        
+        const dailyPercent = Math.min(100, (limits.dailyUsed / limits.dailyLimit) * 100);
+        const weeklyPercent = Math.min(100, (limits.weeklyUsed / limits.weeklyLimit) * 100);
+        
+        // Determinar cores baseadas nos percentuais
+        const getDailyClass = () => {
+            if (limits.dailyUsed >= limits.dailyLimit) return 'danger';
+            if (limits.dailyUsed >= limits.dailyLimit - 1) return 'warning';
+            return 'safe';
+        };
+        
+        const getWeeklyClass = () => {
+            if (limits.weeklyUsed >= limits.weeklyLimit) return 'danger';
+            if (limits.weeklyUsed >= limits.weeklyLimit - 2) return 'warning';
+            return 'safe';
+        };
+        
+        const dailyClass = getDailyClass();
+        const weeklyClass = getWeeklyClass();
+        
+        return `
+            <div class="limits-indicator">
+                <div class="limits-row">
+                    <span class="limit-label">Hoje:</span>
+                    <div class="limit-progress">
+                        <div class="limit-bar">
+                            <div class="limit-fill ${dailyClass}" style="width: ${dailyPercent}%"></div>
+                        </div>
+                        <span class="limit-text ${dailyClass}">${limits.dailyUsed}/${limits.dailyLimit}</span>
+                    </div>
+                </div>
+                <div class="limits-row">
+                    <span class="limit-label">Semana:</span>
+                    <div class="limit-progress">
+                        <div class="limit-bar">
+                            <div class="limit-fill ${weeklyClass}" style="width: ${weeklyPercent}%"></div>
+                        </div>
+                        <span class="limit-text ${weeklyClass}">${limits.weeklyUsed}/${limits.weeklyLimit}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Função para criar alertas de limite
+    function createLimitAlert(professor) {
+        const limits = calculateProfessorLimits(professor);
+        
+        if (!limits.canScheduleToday && !limits.canScheduleThisWeek) {
+            return '<div class="limit-error">⚠️ Limites diário e semanal excedidos!</div>';
+        } else if (!limits.canScheduleToday) {
+            return '<div class="limit-error">⚠️ Limite diário excedido (3/dia)!</div>';
+        } else if (!limits.canScheduleThisWeek) {
+            return '<div class="limit-error">⚠️ Limite semanal excedido (12/semana)!</div>';
+        } else if (limits.dailyRemaining === 1) {
+            return '<div class="limit-warning">⚡ Restam apenas 1 agendamento hoje!</div>';
+        } else if (limits.weeklyRemaining <= 2) {
+            return `<div class="limit-warning">⚡ Restam apenas ${limits.weeklyRemaining} agendamentos nesta semana!</div>`;
+        }
+        
+        return '';
     }
 
     async function saveData() {
@@ -932,16 +1305,22 @@
         professors.forEach(professor => {
             const column = document.createElement('div');
             column.className = 'professor-column';
+            
+            const limitsIndicator = createLimitsIndicator(professor);
+            const limitAlert = createLimitAlert(professor);
+            
             column.innerHTML = `
                 <div class="professor-header">
                     ${professor}
                 </div>
+                ${limitsIndicator}
+                ${limitAlert}
                 <div class="add-person">
                     <input type="text" placeholder="Nome do aluno" id="input-${professor}">
                     <button onclick="addStudent('${professor}')">Adicionar</button>
                 </div>
                 <div class="students-list" id="students-${professor}">
-                    </div>
+                </div>
             `;
             container.appendChild(column);
 
@@ -975,6 +1354,9 @@
             updateStudentsList(professor);
             updateStats();
             await saveData();
+            
+            // Atualizar todos os indicadores de limites
+            updateAllProfessorLimits();
         }
     }
 
@@ -984,7 +1366,33 @@
             updateStudentsList(professor);
             updateStats();
             await saveData();
+            
+            // Atualizar todos os indicadores de limites
+            updateAllProfessorLimits();
         }
+    }
+
+    // Função para atualizar todos os indicadores de limites
+    function updateAllProfessorLimits() {
+        professors.forEach(professor => {
+            const professorColumn = document.querySelector(`#students-${professor}`).parentElement;
+            const existingIndicator = professorColumn.querySelector('.limits-indicator');
+            const existingAlert = professorColumn.querySelector('.limit-warning, .limit-error');
+            
+            if (existingIndicator) {
+                existingIndicator.outerHTML = createLimitsIndicator(professor);
+            }
+            
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+            
+            const newAlert = createLimitAlert(professor);
+            if (newAlert) {
+                const addPersonDiv = professorColumn.querySelector('.add-person');
+                addPersonDiv.insertAdjacentHTML('beforebegin', newAlert);
+            }
+        });
     }
 
     // Variáveis para controle do modal
@@ -999,12 +1407,13 @@
         const subtitle = document.getElementById('modalSubtitle');
         const dateInput = document.getElementById('modalDate');
         const timeInput = document.getElementById('modalTime');
+        const conflictAlert = document.getElementById('timeConflictAlert');
         
         const studentName = studentsData[professor][index].name;
 
         if (action === 'schedule') {
             title.textContent = '📅 Agendar Avaliação';
-            subtitle.textContent = `Para: ${studentName}`;
+            subtitle.textContent = `Para: ${studentName} | Intervalo mínimo: 40 minutos`;
         } else if (action === 'evaluate') {
             title.textContent = '✅ Confirmar Avaliação Realizada';
             subtitle.textContent = `Aluno: ${studentName}`;
@@ -1017,61 +1426,211 @@
         dateInput.value = now.toISOString().split('T')[0];
         timeInput.value = now.toTimeString().split(' ')[0].slice(0, 5);
         
+        // Limpar alertas de conflito
+        conflictAlert.style.display = 'none';
+        conflictAlert.innerHTML = '';
+        
         currentModalAction = action;
         currentProfessor = professor;
         currentStudentIndex = index;
+        
+        // Adicionar event listeners para validação em tempo real (apenas para agendamento)
+        if (action === 'schedule') {
+            const validateTime = () => {
+                checkModalTimeConflict();
+            };
+            
+            dateInput.addEventListener('change', validateTime);
+            timeInput.addEventListener('change', validateTime);
+            timeInput.addEventListener('input', validateTime);
+        }
         
         modal.style.display = 'block';
         dateInput.focus();
     }
 
+    // Função para validar conflitos no modal em tempo real
+    function checkModalTimeConflict() {
+        if (currentModalAction !== 'schedule') return;
+        
+        const dateInput = document.getElementById('modalDate');
+        const timeInput = document.getElementById('modalTime');
+        const conflictAlert = document.getElementById('timeConflictAlert');
+        
+        if (!dateInput.value || !timeInput.value) {
+            conflictAlert.style.display = 'none';
+            return;
+        }
+        
+        try {
+            const dateTimeString = `${dateInput.value}T${timeInput.value}:00`;
+            const dateTime = new Date(dateTimeString);
+            
+            if (isNaN(dateTime.getTime())) {
+                conflictAlert.style.display = 'none';
+                return;
+            }
+            
+            // Verificar conflitos de horário
+            const timeConflict = checkTimeConflicts(currentProfessor, dateTime, currentStudentIndex);
+            
+            if (timeConflict.hasConflicts) {
+                const conflict = timeConflict.conflicts[0];
+                const conflictTime = conflict.scheduledTime.toLocaleTimeString('pt-BR', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                conflictAlert.innerHTML = `
+                    <div class="conflict-error">
+                        ⚠️ <strong>Conflito de horário!</strong><br>
+                        Existe um agendamento para <strong>${conflict.student.name}</strong> às <strong>${conflictTime}</strong><br>
+                        Diferença: <strong>${conflict.timeDifference} minutos</strong> (mínimo: 40 minutos)
+                    </div>
+                `;
+                conflictAlert.style.display = 'block';
+                
+                // Mostrar sugestões de horários
+                const suggestions = suggestAvailableTimes(currentProfessor, dateTime);
+                if (suggestions.length > 0) {
+                    const suggestionsHtml = `
+                        <div class="time-suggestions">
+                            💡 <strong>Horários sugeridos:</strong>
+                            <div class="suggestion-times">
+                                ${suggestions.map(s => 
+                                    `<span class="suggestion-time" onclick="applySuggestedTime('${s.formatted}')">${s.formatted}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    `;
+                    conflictAlert.innerHTML += suggestionsHtml;
+                }
+            } else {
+                conflictAlert.innerHTML = `
+                    <div class="conflict-warning" style="background: #e8f5e8; border-color: #c3e6cb; color: #155724;">
+                        ✅ <strong>Horário disponível!</strong> Nenhum conflito encontrado.
+                    </div>
+                `;
+                conflictAlert.style.display = 'block';
+            }
+        } catch (error) {
+            conflictAlert.style.display = 'none';
+        }
+    }
+
+    // Função para aplicar horário sugerido
+    window.applySuggestedTime = function(timeString) {
+        const timeInput = document.getElementById('modalTime');
+        timeInput.value = timeString;
+        checkModalTimeConflict(); // Revalidar
+    };
+
     // Confirmar data e hora
- async function confirmDateTime() {
-        const dateInput = document.getElementById('modalDate');
-        const timeInput = document.getElementById('modalTime');
+    async function confirmDateTime() {
+        const dateInput = document.getElementById('modalDate');
+        const timeInput = document.getElementById('modalTime');
 
-        if (!dateInput.value || !timeInput.value) {
-            alert('Por favor, preencha a data e o horário.');
-            return;
-        }
+        if (!dateInput.value || !timeInput.value) {
+            alert('Por favor, preencha a data e o horário.');
+            return;
+        }
 
-        try {
-            // Combina os valores dos inputs diretamente no formato YYYY-MM-DDTHH:mm:ss
-            const dateTimeString = `${dateInput.value}T${timeInput.value}:00`;
-            const dateTime = new Date(dateTimeString);
-            if (isNaN(dateTime.getTime())) {
-                alert('Data ou horário inválido!');
-                console.error('Data string inválida:', dateTimeString);
-                return;
-            }
+        try {
+            // Combina os valores dos inputs diretamente no formato YYYY-MM-DDTHH:mm:ss
+            const dateTimeString = `${dateInput.value}T${timeInput.value}:00`;
+            const dateTime = new Date(dateTimeString);
+            if (isNaN(dateTime.getTime())) {
+                alert('Data ou horário inválido!');
+                console.error('Data string inválida:', dateTimeString);
+                return;
+            }
 
-            const student = studentsData[currentProfessor][currentStudentIndex];
+            const student = studentsData[currentProfessor][currentStudentIndex];
 
-            if (currentModalAction === 'schedule') {
-                student.status = 'scheduled';
-                student.scheduledDate = dateTime.toISOString();
-            } else if (currentModalAction === 'evaluate') {
-                student.status = 'evaluated';
-                student.evaluatedDate = dateTime.toISOString();
-            } else if (currentModalAction === 'deliver') {
-                student.status = 'completed';
-                student.completedDate = dateTime.toISOString();
-            }
+            if (currentModalAction === 'schedule') {
+                // Verificar limites antes de agendar
+                const canSchedule = canProfessorScheduleOnDate(currentProfessor, dateTime);
+                
+                if (!canSchedule.canSchedule) {
+                    let message = 'Não é possível agendar nesta data:\n';
+                    if (canSchedule.dailyExceeded) {
+                        message += `• Limite diário excedido (${canSchedule.dayCount}/${DAILY_LIMIT})\n`;
+                    }
+                    if (canSchedule.weeklyExceeded) {
+                        message += `• Limite semanal excedido (${canSchedule.weekCount}/${WEEKLY_LIMIT})\n`;
+                    }
+                    alert(message);
+                    return;
+                }
 
-            await saveData();
-            updateStudentsList(currentProfessor);
-            updateStats();
-            cancelDateTime(); // Fechar o modal
-        } catch (error) {
-            alert('Erro ao processar a data ou horário. Verifique o formato.');
-            console.error('Erro no confirmDateTime:', error);
-            return;
-        }
-    }
+                // Verificar conflitos de horário (intervalo mínimo de 40 minutos)
+                const timeConflict = checkTimeConflicts(currentProfessor, dateTime, currentStudentIndex);
+                
+                if (timeConflict.hasConflicts) {
+                    const conflict = timeConflict.conflicts[0];
+                    const conflictTime = conflict.scheduledTime.toLocaleTimeString('pt-BR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    
+                    let message = `⚠️ CONFLITO DE HORÁRIO!\n\n`;
+                    message += `Já existe um agendamento para "${conflict.student.name}" às ${conflictTime}\n`;
+                    message += `Diferença: ${conflict.timeDifference} minutos (mínimo necessário: 40 minutos)\n\n`;
+                    
+                    // Sugerir horários alternativos
+                    const suggestions = suggestAvailableTimes(currentProfessor, dateTime);
+                    if (suggestions.length > 0) {
+                        message += `Horários sugeridos para hoje:\n`;
+                        suggestions.forEach(s => {
+                            message += `• ${s.formatted}\n`;
+                        });
+                    }
+                    
+                    alert(message);
+                    return;
+                }
+                
+                student.status = 'scheduled';
+                student.scheduledDate = dateTime.toISOString();
+            } else if (currentModalAction === 'evaluate') {
+                student.status = 'evaluated';
+                student.evaluatedDate = dateTime.toISOString();
+            } else if (currentModalAction === 'deliver') {
+                student.status = 'completed';
+                student.completedDate = dateTime.toISOString();
+            }
+
+            await saveData();
+            updateStudentsList(currentProfessor);
+            updateStats();
+            updateAllProfessorLimits(); // Atualizar indicadores de limites
+            cancelDateTime(); // Fechar o modal
+        } catch (error) {
+            alert('Erro ao processar a data ou horário. Verifique o formato.');
+            console.error('Erro no confirmDateTime:', error);
+            return;
+        }
+    }
 
     // Cancelar modal
     function cancelDateTime() {
         const modal = document.getElementById('dateTimeModal');
+        const dateInput = document.getElementById('modalDate');
+        const timeInput = document.getElementById('modalTime');
+        const conflictAlert = document.getElementById('timeConflictAlert');
+        
+        // Remover event listeners
+        if (currentModalAction === 'schedule') {
+            const newDateInput = dateInput.cloneNode(true);
+            const newTimeInput = timeInput.cloneNode(true);
+            dateInput.parentNode.replaceChild(newDateInput, dateInput);
+            timeInput.parentNode.replaceChild(newTimeInput, timeInput);
+        }
+        
+        // Limpar alertas
+        conflictAlert.style.display = 'none';
+        conflictAlert.innerHTML = '';
+        
         modal.style.display = 'none';
         currentModalAction = null;
         currentProfessor = null;
@@ -1087,6 +1646,7 @@
         
         updateStudentsList(professor);
         updateStats();
+        updateAllProfessorLimits(); // Atualizar indicadores de limites
         await saveData();
     }
 
@@ -1204,6 +1764,7 @@
         await saveData();
         updateAllStudentsList();
         updateStats();
+        updateAllProfessorLimits(); // Atualizar indicadores de limites
         alert('As avaliações concluídas foram resetadas para este mês!');
     }
 
@@ -1267,7 +1828,3 @@
     });
 
 </script>
-
-
-
-
