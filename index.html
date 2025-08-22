@@ -158,7 +158,7 @@
             border: 2px solid #FFD700;
         }
 
-        /* Novo: Indicador de limites */
+        /* Indicador de limites */
         .limits-indicator {
             background: #fff;
             border-radius: 8px;
@@ -294,6 +294,26 @@
             font-size: 13px;
             margin-bottom: 15px;
             line-height: 1.4;
+        }
+
+        .limit-error, .limit-warning {
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .limit-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .limit-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
         }
 
         .time-suggestions {
@@ -462,7 +482,7 @@
             color: white;
         }
 
-        .schedule-btn:hover {
+        .schedule-btn:hover:not(:disabled) {
             background: #138496;
             transform: translateY(-1px);
         }
@@ -473,7 +493,7 @@
             color: #000;
         }
 
-        .evaluate-btn:hover {
+        .evaluate-btn:hover:not(:disabled) {
             background: #e0a800;
             transform: translateY(-1px);
         }
@@ -484,7 +504,7 @@
             color: white;
         }
 
-        .deliver-btn:hover {
+        .deliver-btn:hover:not(:disabled) {
             background: #218838;
             transform: translateY(-1px);
         }
@@ -715,6 +735,17 @@
             background: #5a6268;
         }
 
+        .debug-info {
+            background: #e8f5e8;
+            border: 1px solid #28a745;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            color: #155724;
+            display: none; /* Oculto por padrão */
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -793,6 +824,10 @@
         <div class="table-container">
             <div class="month-display" id="currentMonth"></div>
             
+            <div class="debug-info" id="debugInfo">
+                Debug: Sistema funcionando normalmente
+            </div>
+            
             <div class="auto-clean-info">
                 🌐 <strong>Sistema Online - 3 Etapas:</strong><br>
                 <strong>1.</strong> 📅 Agendar avaliação (data/hora planejada)<br>
@@ -813,10 +848,11 @@
         <div class="controls">
             <button onclick="resetAllEvaluations()" id="resetBtn">Resetar Avaliações do Mês</button>
             <button onclick="exportData()" id="exportBtn">Exportar Dados</button>
+            <button onclick="toggleDebug()" id="debugBtn">Toggle Debug</button>
         </div>
 
         <div style="text-align: center; padding: 15px; background: #f8f9fa; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 14px; font-style: italic;">
-            BY Roger Medeiros Xavier | Sistema Online v3.2 - Controle 3 Etapas com Limites e Intervalos
+            BY Roger Medeiros Xavier | Sistema Online v3.3 - Versão Corrigida
         </div>
     </div>
 
@@ -846,985 +882,114 @@
         </div>
     </div>
 
-    <script type="module">
-    // Importações do Firebase atualizadas para a versão v10
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-    import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js"; // Adicionado para evitar erro
+    <script>
+        console.log('Sistema iniciando...');
+        
+        // Dados globais
+        const professors = ['Robson', 'Roger', 'Maicon', 'Roberto', 'Naldon', 'Helízia', 'Danielle'];
+        let studentsData = {};
+        let isInitialized = false;
+        let debugMode = false;
 
-    // Configuração do Firebase
-    const firebaseConfig = {
-        apiKey: "AIzaSyBHq87y9chjWaWxp9nS9lv8Y3_Ik7zu5Ok",
-        authDomain: "academia-performance-16371.firebaseapp.com",
-        databaseURL: "https://academia-performance-16371-default-rtdb.firebaseio.com",
-        projectId: "academia-performance-16371",
-        storageBucket: "academia-performance-16371.firebasestorage.app",
-        messagingSenderId: "973421564338",
-        appId: "1:973421564338:web:099bcf503d677280f514ab"
-    };
+        // Chaves para localStorage
+        const STORAGE_KEY = 'academiaPerformanceData';
+        const LAST_CLEANUP_KEY = 'academiaPerformanceLastCleanup';
 
-    // Inicialização do Firebase
-    let app, database, isConnected = false;
-    
-    try {
-        app = initializeApp(firebaseConfig);
-        database = getDatabase(app);
-        getAuth(app); // Inicializa o Auth para evitar erro de inicialização tardia
+        // Limites por professor
+        const DAILY_LIMIT = 3;
+        const WEEKLY_LIMIT = 12;
 
-        // Monitorar status de conexão
-        const connectedRef = ref(database, ".info/connected");
-        onValue(connectedRef, (snap) => {
-            isConnected = snap.val() === true;
-            updateConnectionStatus();
-            if (isConnected && !window.isFirebaseConnected) {
-                window.isFirebaseConnected = true;
-                init();
-            }
-        });
-    } catch (error) {
-        console.warn('Firebase não configurado, usando modo offline:', error);
-        isConnected = false;
-        setTimeout(() => {
-            updateConnectionStatus();
-            hideLoadingOverlay();
-            init();
-        }, 1000);
-    }
-    
-    // Deixa as funções globais para o HTML
-    window.addStudent = addStudent;
-    window.removeStudent = removeStudent;
-    window.openDateTimeModal = openDateTimeModal;
-    window.confirmDateTime = confirmDateTime;
-    window.cancelDateTime = cancelDateTime;
-    window.resetAllEvaluations = resetAllEvaluations;
-    window.exportData = exportData;
-    window.updateStudentStatus = updateStudentStatus;
+        // Variáveis para controle do modal
+        let currentModalAction = null;
+        let currentProfessor = null;
+        let currentStudentIndex = null;
 
-    const professors = ['Robson', 'Roger', 'Maicon', 'Roberto', 'Naldon', 'Helízia', 'Danielle'];
-    let studentsData = {};
-    let isInitialized = false;
-
-    // Chaves para fallback local
-    const STORAGE_KEY = 'academiaPerformanceData';
-    const LAST_CLEANUP_KEY = 'academiaPerformanceLastCleanup';
-
-    // Limites por professor
-    const DAILY_LIMIT = 3;
-    const WEEKLY_LIMIT = 12;
-
-    // Atualizar status de conexão
-    function updateConnectionStatus() {
-        const statusEl = document.getElementById('connectionStatus');
-        const buttons = document.querySelectorAll('.add-person button, .controls button');
-        
-        if (isConnected) {
-            statusEl.textContent = '🟢 Online';
-            statusEl.className = 'connection-status connected';
-            buttons.forEach(btn => btn.disabled = false);
-        } else {
-            statusEl.textContent = '🔴 Offline';
-            statusEl.className = 'connection-status disconnected';
-            buttons.forEach(btn => btn.disabled = false);
-        }
-    }
-
-    function showLoadingOverlay() {
-        document.getElementById('loadingOverlay').style.display = 'flex';
-    }
-
-    function hideLoadingOverlay() {
-        document.getElementById('loadingOverlay').style.display = 'none';
-    }
-
-    function initializeProfessorsData() {
-        professors.forEach(prof => {
-            if (!studentsData[prof]) {
-                studentsData[prof] = [];
-            }
-        });
-    }
-
-    // Função para calcular limites de um professor
-    function calculateProfessorLimits(professor) {
-        const students = studentsData[professor] || [];
-        const now = new Date();
-        
-        // Calcula início da semana (domingo)
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
-        
-        // Data de hoje
-        const today = new Date(now);
-        today.setHours(0, 0, 0, 0);
-        
-        // Contar agendamentos para hoje
-        const todayCount = students.filter(student => {
-            if (!student.scheduledDate) return false;
-            const scheduledDate = new Date(student.scheduledDate);
-            scheduledDate.setHours(0, 0, 0, 0);
-            return scheduledDate.getTime() === today.getTime();
-        }).length;
-        
-        // Contar agendamentos para esta semana
-        const weekCount = students.filter(student => {
-            if (!student.scheduledDate) return false;
-            const scheduledDate = new Date(student.scheduledDate);
-            return scheduledDate >= startOfWeek && scheduledDate <= now;
-        }).length;
-        
-        return {
-            dailyUsed: todayCount,
-            dailyLimit: DAILY_LIMIT,
-            dailyRemaining: Math.max(0, DAILY_LIMIT - todayCount),
-            weeklyUsed: weekCount,
-            weeklyLimit: WEEKLY_LIMIT,
-            weeklyRemaining: Math.max(0, WEEKLY_LIMIT - weekCount),
-            canScheduleToday: todayCount < DAILY_LIMIT,
-            canScheduleThisWeek: weekCount < WEEKLY_LIMIT
-        };
-    }
-
-    // Verificar se um professor pode agendar em uma data específica
-    function canProfessorScheduleOnDate(professor, targetDate) {
-        const students = studentsData[professor] || [];
-        const target = new Date(targetDate);
-        target.setHours(0, 0, 0, 0);
-        
-        // Calcula início da semana da data alvo
-        const startOfWeek = new Date(target);
-        startOfWeek.setDate(target.getDate() - target.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
-        
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-        
-        // Contar agendamentos para o dia específico
-        const dayCount = students.filter(student => {
-            if (!student.scheduledDate) return false;
-            const scheduledDate = new Date(student.scheduledDate);
-            scheduledDate.setHours(0, 0, 0, 0);
-            return scheduledDate.getTime() === target.getTime();
-        }).length;
-        
-        // Contar agendamentos para a semana da data alvo
-        const weekCount = students.filter(student => {
-            if (!student.scheduledDate) return false;
-            const scheduledDate = new Date(student.scheduledDate);
-            return scheduledDate >= startOfWeek && scheduledDate <= endOfWeek;
-        }).length;
-        
-        return {
-            canSchedule: dayCount < DAILY_LIMIT && weekCount < WEEKLY_LIMIT,
-            dayCount: dayCount,
-            weekCount: weekCount,
-            dailyExceeded: dayCount >= DAILY_LIMIT,
-            weeklyExceeded: weekCount >= WEEKLY_LIMIT
-        };
-    }
-
-    // Verificar conflitos de horário (intervalo mínimo de 40 minutos)
-    function checkTimeConflicts(professor, targetDateTime, excludeIndex = -1) {
-        const students = studentsData[professor] || [];
-        const MINIMUM_INTERVAL_MS = 40 * 60 * 1000; // 40 minutos em milliseconds
-        const targetTime = new Date(targetDateTime);
-        
-        const conflicts = [];
-        
-        students.forEach((student, index) => {
-            if (index === excludeIndex || !student.scheduledDate) return;
-            
-            const scheduledTime = new Date(student.scheduledDate);
-            const timeDiff = Math.abs(targetTime - scheduledTime);
-            
-            if (timeDiff < MINIMUM_INTERVAL_MS) {
-                const diffMinutes = Math.floor(timeDiff / (60 * 1000));
-                conflicts.push({
-                    student: student,
-                    scheduledTime: scheduledTime,
-                    timeDifference: diffMinutes,
-                    index: index
-                });
-            }
-        });
-        
-        return {
-            hasConflicts: conflicts.length > 0,
-            conflicts: conflicts,
-            minimumInterval: 40
-        };
-    }
-
-    // Função para sugerir horários disponíveis
-    function suggestAvailableTimes(professor, targetDate) {
-        const students = studentsData[professor] || [];
-        const suggestions = [];
-        const date = new Date(targetDate);
-        
-        // Buscar todos os agendamentos do dia
-        const daySchedules = students
-            .filter(s => s.scheduledDate)
-            .map(s => new Date(s.scheduledDate))
-            .filter(d => {
-                const scheduleDate = new Date(d);
-                scheduleDate.setHours(0, 0, 0, 0);
-                const targetDateOnly = new Date(date);
-                targetDateOnly.setHours(0, 0, 0, 0);
-                return scheduleDate.getTime() === targetDateOnly.getTime();
-            })
-            .sort((a, b) => a - b);
-        
-        // Horário de funcionamento: 6:00 às 22:00
-        const startHour = 6;
-        const endHour = 22;
-        
-        for (let hour = startHour; hour < endHour; hour++) {
-            for (let minute = 0; minute < 60; minute += 30) { // Intervalos de 30 minutos
-                const testTime = new Date(date);
-                testTime.setHours(hour, minute, 0, 0);
-                
-                const conflict = checkTimeConflicts(professor, testTime);
-                if (!conflict.hasConflicts) {
-                    suggestions.push({
-                        time: testTime,
-                        formatted: testTime.toTimeString().slice(0, 5)
-                    });
+        // Função para debug
+        function debugLog(message, data = null) {
+            if (debugMode) {
+                console.log(`[DEBUG] ${message}`, data);
+                const debugEl = document.getElementById('debugInfo');
+                if (debugEl) {
+                    debugEl.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+                    debugEl.style.display = 'block';
                 }
-                
-                if (suggestions.length >= 10) break; // Limitar sugestões
             }
-            if (suggestions.length >= 10) break;
         }
-        
-        return suggestions.slice(0, 5); // Retornar apenas as 5 primeiras sugestões
-    }
 
-    // Função para criar o indicador visual de limites
-    function createLimitsIndicator(professor) {
-        const limits = calculateProfessorLimits(professor);
-        
-        const dailyPercent = Math.min(100, (limits.dailyUsed / limits.dailyLimit) * 100);
-        const weeklyPercent = Math.min(100, (limits.weeklyUsed / limits.weeklyLimit) * 100);
-        
-        // Determinar cores baseadas nos percentuais
-        const getDailyClass = () => {
-            if (limits.dailyUsed >= limits.dailyLimit) return 'danger';
-            if (limits.dailyUsed >= limits.dailyLimit - 1) return 'warning';
-            return 'safe';
-        };
-        
-        const getWeeklyClass = () => {
-            if (limits.weeklyUsed >= limits.weeklyLimit) return 'danger';
-            if (limits.weeklyUsed >= limits.weeklyLimit - 2) return 'warning';
-            return 'safe';
-        };
-        
-        const dailyClass = getDailyClass();
-        const weeklyClass = getWeeklyClass();
-        
-        return `
-            <div class="limits-indicator">
-                <div class="limits-row">
-                    <span class="limit-label">Hoje:</span>
-                    <div class="limit-progress">
-                        <div class="limit-bar">
-                            <div class="limit-fill ${dailyClass}" style="width: ${dailyPercent}%"></div>
-                        </div>
-                        <span class="limit-text ${dailyClass}">${limits.dailyUsed}/${limits.dailyLimit}</span>
-                    </div>
-                </div>
-                <div class="limits-row">
-                    <span class="limit-label">Semana:</span>
-                    <div class="limit-progress">
-                        <div class="limit-bar">
-                            <div class="limit-fill ${weeklyClass}" style="width: ${weeklyPercent}%"></div>
-                        </div>
-                        <span class="limit-text ${weeklyClass}">${limits.weeklyUsed}/${limits.weeklyLimit}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    // Função para criar alertas de limite
-    function createLimitAlert(professor) {
-        const limits = calculateProfessorLimits(professor);
-        
-        if (!limits.canScheduleToday && !limits.canScheduleThisWeek) {
-            return '<div class="limit-error">⚠️ Limites diário e semanal excedidos!</div>';
-        } else if (!limits.canScheduleToday) {
-            return '<div class="limit-error">⚠️ Limite diário excedido (3/dia)!</div>';
-        } else if (!limits.canScheduleThisWeek) {
-            return '<div class="limit-error">⚠️ Limite semanal excedido (12/semana)!</div>';
-        } else if (limits.dailyRemaining === 1) {
-            return '<div class="limit-warning">⚡ Restam apenas 1 agendamento hoje!</div>';
-        } else if (limits.weeklyRemaining <= 2) {
-            return `<div class="limit-warning">⚡ Restam apenas ${limits.weeklyRemaining} agendamentos nesta semana!</div>`;
+        function toggleDebug() {
+            debugMode = !debugMode;
+            const debugEl = document.getElementById('debugInfo');
+            if (debugMode) {
+                debugEl.style.display = 'block';
+                debugLog('Debug mode ativado');
+            } else {
+                debugEl.style.display = 'none';
+            }
         }
-        
-        return '';
-    }
 
-    async function saveData() {
-        const dataToSave = {
-            studentsData: studentsData,
-            timestamp: new Date().toISOString()
-        };
+        // Inicializar dados dos professores
+        function initializeProfessorsData() {
+            debugLog('Inicializando dados dos professores...');
+            professors.forEach(prof => {
+                if (!studentsData[prof]) {
+                    studentsData[prof] = [];
+                }
+                debugLog(`Professor ${prof} inicializado com ${studentsData[prof].length} alunos`);
+            });
+        }
 
-        if (isConnected) {
+        // Salvar dados no localStorage
+        function saveData() {
             try {
-                await set(ref(database, 'academiaPerformance'), dataToSave);
-                console.log('Dados salvos no Firebase');
-            } catch (error) {
-                console.error('Erro ao salvar no Firebase:', error);
+                const dataToSave = {
+                    studentsData: studentsData,
+                    timestamp: new Date().toISOString()
+                };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+                debugLog('Dados salvos no localStorage', dataToSave);
+                return true;
+            } catch (error) {
+                console.error('Erro ao salvar dados:', error);
+                debugLog('Erro ao salvar dados: ' + error.message);
+                return false;
             }
-        } else {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-            console.log('Dados salvos localmente');
         }
-    }
 
-    async function loadData() {
-        if (isConnected) {
+        // Carregar dados do localStorage
+        function loadData() {
             try {
-                const snapshot = await get(ref(database, 'academiaPerformance'));
-                const data = snapshot.val();
-                
-                if (data && data.studentsData) {
-                    studentsData = data.studentsData;
-                    console.log('Dados carregados do Firebase');
+                const savedData = localStorage.getItem(STORAGE_KEY);
+                if (savedData) {
+                    const parsed = JSON.parse(savedData);
+                    studentsData = parsed.studentsData || {};
+                    debugLog('Dados carregados do localStorage', studentsData);
                 } else {
-                    console.log('Nenhum dado encontrado no Firebase, carregando localmente...');
-                    loadLocalData();
+                    debugLog('Nenhum dado salvo encontrado, iniciando com dados vazios');
+                    studentsData = {};
                 }
             } catch (error) {
-                console.error('Erro ao carregar do Firebase:', error);
-                loadLocalData();
-            }
-        } else {
-            loadLocalData();
-        }
-        
-        initializeProfessorsData();
-    }
-
-    function loadLocalData() {
-        try {
-            const savedData = localStorage.getItem(STORAGE_KEY);
-            if (savedData) {
-                const parsed = JSON.parse(savedData);
-                studentsData = parsed.studentsData || {};
-                console.log('Dados carregados do localStorage');
-            }
-        } catch (error) {
-            console.error('Erro ao carregar dados locais:', error);
-            studentsData = {};
-        }
-    }
-
-    function setupRealtimeListener() {
-        if (database && isConnected) {
-            onValue(ref(database, 'academiaPerformance'), (snapshot) => {
-                if (!isInitialized) return;
-                
-                const data = snapshot.val();
-                if (data && data.studentsData) {
-                    studentsData = data.studentsData;
-                    updateAllStudentsList();
-                    updateStats();
-                    console.log('Dados atualizados em tempo real');
-                }
-            });
-        }
-    }
-
-    async function checkMonthlyCleanup() {
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-        const currentMonthKey = `${currentYear}-${currentMonth}`;
-        
-        let lastCleanup;
-        
-        if (isConnected) {
-            try {
-                const snapshot = await get(ref(database, 'lastCleanup'));
-                lastCleanup = snapshot.val();
-            } catch (error) {
-                lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
-            }
-        } else {
-            lastCleanup = localStorage.getItem(LAST_CLEANUP_KEY);
-        }
-        
-        if (lastCleanup !== currentMonthKey) {
-            await performMonthlyCleanup();
-            
-            if (isConnected) {
-                try {
-                    await set(ref(database, 'lastCleanup'), currentMonthKey);
-                } catch (error) {
-                    localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
-                }
-            } else {
-                localStorage.setItem(LAST_CLEANUP_KEY, currentMonthKey);
+                console.error('Erro ao carregar dados:', error);
+                debugLog('Erro ao carregar dados: ' + error.message);
+                studentsData = {};
             }
             
-            console.log('Limpeza mensal realizada automaticamente');
-        }
-    }
-
-    async function performMonthlyCleanup() {
-        professors.forEach(prof => {
-            if (studentsData[prof]) {
-                studentsData[prof] = studentsData[prof].filter(student => 
-                    student.status !== 'completed'
-                );
-            }
-        });
-        await saveData();
-    }
-
-    function updateCurrentMonth() {
-        const now = new Date();
-        const monthNames = [
-            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-        ];
-        document.getElementById('currentMonth').textContent = 
-            `Controle de Avaliações - ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-    }
-
-    function createProfessorsInterface() {
-        const container = document.getElementById('professorsGrid');
-        container.innerHTML = '';
-
-        professors.forEach(professor => {
-            const column = document.createElement('div');
-            column.className = 'professor-column';
-            
-            const limitsIndicator = createLimitsIndicator(professor);
-            const limitAlert = createLimitAlert(professor);
-            
-            column.innerHTML = `
-                <div class="professor-header">
-                    ${professor}
-                </div>
-                ${limitsIndicator}
-                ${limitAlert}
-                <div class="add-person">
-                    <input type="text" placeholder="Nome do aluno" id="input-${professor}">
-                    <button onclick="addStudent('${professor}')">Adicionar</button>
-                </div>
-                <div class="students-list" id="students-${professor}">
-                </div>
-            `;
-            container.appendChild(column);
-
-            const input = column.querySelector(`#input-${professor}`);
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    addStudent(professor);
-                }
-            });
-        });
-
-        updateAllStudentsList();
-    }
-
-    async function addStudent(professor) {
-        const input = document.getElementById(`input-${professor}`);
-        const studentName = input.value.trim();
-        
-        if (studentName) {
-            const student = {
-                name: studentName,
-                status: 'pending', // pending, scheduled, evaluated, completed
-                addedDate: new Date().toISOString(),
-                scheduledDate: null,    // Data/hora AGENDADA para avaliação
-                evaluatedDate: null,    // Data/hora REAL que foi avaliado
-                completedDate: null      // Data/hora REAL que foi entregue
-            };
-            
-            studentsData[professor].push(student);
-            input.value = '';
-            updateStudentsList(professor);
-            updateStats();
-            await saveData();
-            
-            // Atualizar todos os indicadores de limites
-            updateAllProfessorLimits();
-        }
-    }
-
-    async function removeStudent(professor, index) {
-        if (confirm('Tem certeza que deseja remover este aluno?')) {
-            studentsData[professor].splice(index, 1);
-            updateStudentsList(professor);
-            updateStats();
-            await saveData();
-            
-            // Atualizar todos os indicadores de limites
-            updateAllProfessorLimits();
-        }
-    }
-
-    // Função para atualizar todos os indicadores de limites
-    function updateAllProfessorLimits() {
-        professors.forEach(professor => {
-            const professorColumn = document.querySelector(`#students-${professor}`).parentElement;
-            const existingIndicator = professorColumn.querySelector('.limits-indicator');
-            const existingAlert = professorColumn.querySelector('.limit-warning, .limit-error');
-            
-            if (existingIndicator) {
-                existingIndicator.outerHTML = createLimitsIndicator(professor);
-            }
-            
-            if (existingAlert) {
-                existingAlert.remove();
-            }
-            
-            const newAlert = createLimitAlert(professor);
-            if (newAlert) {
-                const addPersonDiv = professorColumn.querySelector('.add-person');
-                addPersonDiv.insertAdjacentHTML('beforebegin', newAlert);
-            }
-        });
-    }
-
-    // Variáveis para controle do modal
-    let currentModalAction = null;
-    let currentProfessor = null;
-    let currentStudentIndex = null;
-
-    // Abrir modal de data e hora
-    function openDateTimeModal(action, professor, index) {
-        const modal = document.getElementById('dateTimeModal');
-        const title = document.getElementById('modalTitle');
-        const subtitle = document.getElementById('modalSubtitle');
-        const dateInput = document.getElementById('modalDate');
-        const timeInput = document.getElementById('modalTime');
-        const conflictAlert = document.getElementById('timeConflictAlert');
-        
-        const studentName = studentsData[professor][index].name;
-
-        if (action === 'schedule') {
-            title.textContent = '📅 Agendar Avaliação';
-            subtitle.textContent = `Para: ${studentName} | Intervalo mínimo: 40 minutos`;
-        } else if (action === 'evaluate') {
-            title.textContent = '✅ Confirmar Avaliação Realizada';
-            subtitle.textContent = `Aluno: ${studentName}`;
-        } else if (action === 'deliver') {
-            title.textContent = '📦 Confirmar Entrega do Treino';
-            subtitle.textContent = `Para: ${studentName}`;
-        }
-        
-        const now = new Date();
-        dateInput.value = now.toISOString().split('T')[0];
-        timeInput.value = now.toTimeString().split(' ')[0].slice(0, 5);
-        
-        // Limpar alertas de conflito
-        conflictAlert.style.display = 'none';
-        conflictAlert.innerHTML = '';
-        
-        currentModalAction = action;
-        currentProfessor = professor;
-        currentStudentIndex = index;
-        
-        // Adicionar event listeners para validação em tempo real (apenas para agendamento)
-        if (action === 'schedule') {
-            const validateTime = () => {
-                checkModalTimeConflict();
-            };
-            
-            dateInput.addEventListener('change', validateTime);
-            timeInput.addEventListener('change', validateTime);
-            timeInput.addEventListener('input', validateTime);
-        }
-        
-        modal.style.display = 'block';
-        dateInput.focus();
-    }
-
-    // Função para validar conflitos no modal em tempo real
-    function checkModalTimeConflict() {
-        if (currentModalAction !== 'schedule') return;
-        
-        const dateInput = document.getElementById('modalDate');
-        const timeInput = document.getElementById('modalTime');
-        const conflictAlert = document.getElementById('timeConflictAlert');
-        
-        if (!dateInput.value || !timeInput.value) {
-            conflictAlert.style.display = 'none';
-            return;
-        }
-        
-        try {
-            const dateTimeString = `${dateInput.value}T${timeInput.value}:00`;
-            const dateTime = new Date(dateTimeString);
-            
-            if (isNaN(dateTime.getTime())) {
-                conflictAlert.style.display = 'none';
-                return;
-            }
-            
-            // Verificar conflitos de horário
-            const timeConflict = checkTimeConflicts(currentProfessor, dateTime, currentStudentIndex);
-            
-            if (timeConflict.hasConflicts) {
-                const conflict = timeConflict.conflicts[0];
-                const conflictTime = conflict.scheduledTime.toLocaleTimeString('pt-BR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
-                conflictAlert.innerHTML = `
-                    <div class="conflict-error">
-                        ⚠️ <strong>Conflito de horário!</strong><br>
-                        Existe um agendamento para <strong>${conflict.student.name}</strong> às <strong>${conflictTime}</strong><br>
-                        Diferença: <strong>${conflict.timeDifference} minutos</strong> (mínimo: 40 minutos)
-                    </div>
-                `;
-                conflictAlert.style.display = 'block';
-                
-                // Mostrar sugestões de horários
-                const suggestions = suggestAvailableTimes(currentProfessor, dateTime);
-                if (suggestions.length > 0) {
-                    const suggestionsHtml = `
-                        <div class="time-suggestions">
-                            💡 <strong>Horários sugeridos:</strong>
-                            <div class="suggestion-times">
-                                ${suggestions.map(s => 
-                                    `<span class="suggestion-time" onclick="applySuggestedTime('${s.formatted}')">${s.formatted}</span>`
-                                ).join('')}
-                            </div>
-                        </div>
-                    `;
-                    conflictAlert.innerHTML += suggestionsHtml;
-                }
-            } else {
-                conflictAlert.innerHTML = `
-                    <div class="conflict-warning" style="background: #e8f5e8; border-color: #c3e6cb; color: #155724;">
-                        ✅ <strong>Horário disponível!</strong> Nenhum conflito encontrado.
-                    </div>
-                `;
-                conflictAlert.style.display = 'block';
-            }
-        } catch (error) {
-            conflictAlert.style.display = 'none';
-        }
-    }
-
-    // Função para aplicar horário sugerido
-    window.applySuggestedTime = function(timeString) {
-        const timeInput = document.getElementById('modalTime');
-        timeInput.value = timeString;
-        checkModalTimeConflict(); // Revalidar
-    };
-
-    // Confirmar data e hora
-    async function confirmDateTime() {
-        const dateInput = document.getElementById('modalDate');
-        const timeInput = document.getElementById('modalTime');
-
-        if (!dateInput.value || !timeInput.value) {
-            alert('Por favor, preencha a data e o horário.');
-            return;
+            initializeProfessorsData();
         }
 
-        try {
-            // Combina os valores dos inputs diretamente no formato YYYY-MM-DDTHH:mm:ss
-            const dateTimeString = `${dateInput.value}T${timeInput.value}:00`;
-            const dateTime = new Date(dateTimeString);
-            if (isNaN(dateTime.getTime())) {
-                alert('Data ou horário inválido!');
-                console.error('Data string inválida:', dateTimeString);
-                return;
-            }
-
-            const student = studentsData[currentProfessor][currentStudentIndex];
-
-            if (currentModalAction === 'schedule') {
-                // Verificar limites antes de agendar
-                const canSchedule = canProfessorScheduleOnDate(currentProfessor, dateTime);
-                
-                if (!canSchedule.canSchedule) {
-                    let message = 'Não é possível agendar nesta data:\n';
-                    if (canSchedule.dailyExceeded) {
-                        message += `• Limite diário excedido (${canSchedule.dayCount}/${DAILY_LIMIT})\n`;
-                    }
-                    if (canSchedule.weeklyExceeded) {
-                        message += `• Limite semanal excedido (${canSchedule.weekCount}/${WEEKLY_LIMIT})\n`;
-                    }
-                    alert(message);
-                    return;
-                }
-
-                // Verificar conflitos de horário (intervalo mínimo de 40 minutos)
-                const timeConflict = checkTimeConflicts(currentProfessor, dateTime, currentStudentIndex);
-                
-                if (timeConflict.hasConflicts) {
-                    const conflict = timeConflict.conflicts[0];
-                    const conflictTime = conflict.scheduledTime.toLocaleTimeString('pt-BR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
-                    
-                    let message = `⚠️ CONFLITO DE HORÁRIO!\n\n`;
-                    message += `Já existe um agendamento para "${conflict.student.name}" às ${conflictTime}\n`;
-                    message += `Diferença: ${conflict.timeDifference} minutos (mínimo necessário: 40 minutos)\n\n`;
-                    
-                    // Sugerir horários alternativos
-                    const suggestions = suggestAvailableTimes(currentProfessor, dateTime);
-                    if (suggestions.length > 0) {
-                        message += `Horários sugeridos para hoje:\n`;
-                        suggestions.forEach(s => {
-                            message += `• ${s.formatted}\n`;
-                        });
-                    }
-                    
-                    alert(message);
-                    return;
-                }
-                
-                student.status = 'scheduled';
-                student.scheduledDate = dateTime.toISOString();
-            } else if (currentModalAction === 'evaluate') {
-                student.status = 'evaluated';
-                student.evaluatedDate = dateTime.toISOString();
-            } else if (currentModalAction === 'deliver') {
-                student.status = 'completed';
-                student.completedDate = dateTime.toISOString();
-            }
-
-            await saveData();
-            updateStudentsList(currentProfessor);
-            updateStats();
-            updateAllProfessorLimits(); // Atualizar indicadores de limites
-            cancelDateTime(); // Fechar o modal
-        } catch (error) {
-            alert('Erro ao processar a data ou horário. Verifique o formato.');
-            console.error('Erro no confirmDateTime:', error);
-            return;
-        }
-    }
-
-    // Cancelar modal
-    function cancelDateTime() {
-        const modal = document.getElementById('dateTimeModal');
-        const dateInput = document.getElementById('modalDate');
-        const timeInput = document.getElementById('modalTime');
-        const conflictAlert = document.getElementById('timeConflictAlert');
-        
-        // Remover event listeners
-        if (currentModalAction === 'schedule') {
-            const newDateInput = dateInput.cloneNode(true);
-            const newTimeInput = timeInput.cloneNode(true);
-            dateInput.parentNode.replaceChild(newDateInput, dateInput);
-            timeInput.parentNode.replaceChild(newTimeInput, timeInput);
-        }
-        
-        // Limpar alertas
-        conflictAlert.style.display = 'none';
-        conflictAlert.innerHTML = '';
-        
-        modal.style.display = 'none';
-        currentModalAction = null;
-        currentProfessor = null;
-        currentStudentIndex = null;
-    }
-
-    async function updateStudentStatus(professor, index, newStatus, dateType) {
-        const student = studentsData[professor][index];
-        student.status = newStatus;
-        if (dateType) {
-            student[dateType] = new Date().toISOString();
-        }
-        
-        updateStudentsList(professor);
-        updateStats();
-        updateAllProfessorLimits(); // Atualizar indicadores de limites
-        await saveData();
-    }
-
-    function updateAllStudentsList() {
-        professors.forEach(prof => updateStudentsList(prof));
-    }
-
-    function updateStudentsList(professor) {
-        const list = document.getElementById(`students-${professor}`);
-        list.innerHTML = '';
-        
-        const sortedStudents = [...(studentsData[professor] || [])].sort((a, b) => {
-            const statusOrder = { 'pending': 1, 'scheduled': 2, 'evaluated': 3, 'completed': 4 };
-            if (statusOrder[a.status] !== statusOrder[b.status]) {
-                return statusOrder[a.status] - statusOrder[b.status];
-            }
-            return new Date(a.addedDate) - new Date(b.addedDate);
-        });
-
-        sortedStudents.forEach((student, index) => {
-            const originalIndex = studentsData[professor].findIndex(s => s === student);
-            const item = document.createElement('div');
-            item.className = `student-item ${student.status}`;
+        // Função para calcular limites de um professor
+        function calculateProfessorLimits(professor) {
+            const students = studentsData[professor] || [];
+            const now = new Date();
             
-            let datesHtml = '';
-            if (student.scheduledDate) {
-                datesHtml += `
-                    <div class="date-row">
-                        <span class="date-label">Agendada:</span>
-                        <span class="date-value">${formatDateTime(student.scheduledDate)}</span>
-                    </div>
-                `;
-            }
-            if (student.evaluatedDate) {
-                datesHtml += `
-                    <div class="date-row">
-                        <span class="date-label">Avaliada:</span>
-                        <span class="date-value">${formatDateTime(student.evaluatedDate)}</span>
-                    </div>
-                `;
-            }
-            if (student.completedDate) {
-                datesHtml += `
-                    <div class="date-row">
-                        <span class="date-label">Entregue:</span>
-                        <span class="date-value">${formatDateTime(student.completedDate)}</span>
-                    </div>
-                `;
-            }
+            // Calcula início da semana (domingo)
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - now.getDay());
+            startOfWeek.setHours(0, 0, 0, 0);
             
-            const statusText = {
-                pending: 'Pendente',
-                scheduled: 'Agendado',
-                evaluated: 'Avaliado',
-                completed: 'Concluído'
-            }[student.status];
-
-            item.innerHTML = `
-                <div class="student-header">
-                    <span class="student-name">${student.name}</span>
-                    <span class="student-status">${statusText}</span>
-                </div>
-                ${datesHtml ? `<div class="student-dates">${datesHtml}</div>` : ''}
-                <div class="action-buttons">
-                    <button class="action-btn schedule-btn" onclick="openDateTimeModal('schedule', '${professor}', ${originalIndex})" ${student.status !== 'pending' ? 'disabled' : ''}>Agendar</button>
-                    <button class="action-btn evaluate-btn" onclick="openDateTimeModal('evaluate', '${professor}', ${originalIndex})" ${student.status !== 'scheduled' ? 'disabled' : ''}>Avaliar</button>
-                    <button class="action-btn deliver-btn" onclick="openDateTimeModal('deliver', '${professor}', ${originalIndex})" ${student.status !== 'evaluated' ? 'disabled' : ''}>Entregar</button>
-                    <button class="remove-btn" onclick="removeStudent('${professor}', ${originalIndex})">Remover</button>
-                </div>
-            `;
-            list.appendChild(item);
-        });
-    }
-
-    function formatDateTime(isoString) {
-        if (!isoString) return 'N/A';
-        const date = new Date(isoString);
-        return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-    }
-
-    function updateStats() {
-        let total = 0;
-        let scheduled = 0;
-        let evaluated = 0;
-        let completed = 0;
-        let pending = 0;
-
-        professors.forEach(prof => {
-            const students = studentsData[prof] || [];
-            total += students.length;
-            scheduled += students.filter(s => s.status === 'scheduled').length;
-            evaluated += students.filter(s => s.status === 'evaluated').length;
-            completed += students.filter(s => s.status === 'completed').length;
-            pending += students.filter(s => s.status === 'pending').length;
-        });
-
-        document.getElementById('totalStudents').textContent = total;
-        document.getElementById('scheduledStudents').textContent = scheduled;
-        document.getElementById('evaluatedStudents').textContent = evaluated;
-        document.getElementById('completedDeliveries').textContent = completed;
-        document.getElementById('pendingStudents').textContent = pending;
-    }
-
-    async function resetAllEvaluations() {
-        if (!confirm("Tem certeza que deseja resetar todas as avaliações deste mês? Isso removerá todos os alunos com status 'Concluído'.")) {
-            return;
-        }
-
-        professors.forEach(prof => {
-            if (studentsData[prof]) {
-                studentsData[prof] = studentsData[prof].filter(student => student.status !== 'completed');
-            }
-        });
-        
-        await saveData();
-        updateAllStudentsList();
-        updateStats();
-        updateAllProfessorLimits(); // Atualizar indicadores de limites
-        alert('As avaliações concluídas foram resetadas para este mês!');
-    }
-
-    function exportData() {
-        let csvContent = "Professor,Nome do Aluno,Status,Adicionado em,Agendado,Avaliado,Entregue\n";
-
-        professors.forEach(prof => {
-            const students = studentsData[prof] || [];
-            students.forEach(student => {
-                const addedDate = student.addedDate ? new Date(student.addedDate).toLocaleString('pt-BR') : '';
-                const scheduledDate = student.scheduledDate ? new Date(student.scheduledDate).toLocaleString('pt-BR') : '';
-                const evaluatedDate = student.evaluatedDate ? new Date(student.evaluatedDate).toLocaleString('pt-BR') : '';
-                const completedDate = student.completedDate ? new Date(student.completedDate).toLocaleString('pt-BR') : '';
-                
-                const row = [
-                    prof,
-                    `"${student.name.replace(/"/g, '""')}"`, // Protege contra vírgulas no nome
-                    student.status,
-                    addedDate,
-                    scheduledDate,
-                    evaluatedDate,
-                    completedDate
-                ].join(',');
-                csvContent += row + "\n";
-            });
-        });
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", "dados_avaliacoes_academia.csv");
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-    
-    // Função de inicialização principal
-    async function init() {
-        showLoadingOverlay();
-        updateCurrentMonth();
-        await loadData();
-        await checkMonthlyCleanup(); // Executa a limpeza automática após carregar os dados
-        createProfessorsInterface();
-        updateStats();
-        hideLoadingOverlay();
-        isInitialized = true;
-        setupRealtimeListener();
-    }
-
-    // Inicia o sistema
-    init();
-
-    // Eventos para o modal de data/hora
-    window.addEventListener('click', (e) => {
-        const modal = document.getElementById('dateTimeModal');
-        if (e.target === modal) {
-            cancelDateTime();
-        }
-    });
-
-</script>
+            // Data de hoje
+            const today = new Date(now);
+            today.setHours(0, 0, 0, 0);
+            
+            // Contar agendamentos para hoje
+            const todayCount = students.filter(student => {
+                if (!student.schedul
