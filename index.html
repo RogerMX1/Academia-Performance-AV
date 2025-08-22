@@ -1335,31 +1335,36 @@
         updateAllStudentsList();
     }
 
-    async function addStudent(professor) {
-        const input = document.getElementById(`input-${professor}`);
-        const studentName = input.value.trim();
-        
-        if (studentName) {
-            const student = {
-                name: studentName,
-                status: 'pending', // pending, scheduled, evaluated, completed
-                addedDate: new Date().toISOString(),
-                scheduledDate: null,    // Data/hora AGENDADA para avaliação
-                evaluatedDate: null,    // Data/hora REAL que foi avaliado
-                completedDate: null      // Data/hora REAL que foi entregue
-            };
-            
-            studentsData[professor].push(student);
-            input.value = '';
-            updateStudentsList(professor);
-            updateStats();
-            await saveData();
-            
-            // Atualizar todos os indicadores de limites
-            updateAllProfessorLimits();
+   // Localize a função `addStudent(professor)`
+async function addStudent(professor) {
+    const input = document.getElementById(`input-${professor}`);
+    const studentName = input.value.trim();
+    
+    if (studentName) {
+        // --- Adicione esta verificação AQUI ---
+        if (!studentsData[professor]) {
+            studentsData[professor] = [];
         }
-    }
+        // ----------------------------------------
 
+        const student = {
+            name: studentName,
+            status: 'pending', // pending, scheduled, evaluated, completed
+            addedDate: new Date().toISOString(),
+            scheduledDate: null,
+            evaluatedDate: null,
+            completedDate: null
+        };
+        
+        studentsData[professor].push(student);
+        input.value = '';
+        updateStudentsList(professor);
+        updateStats();
+        await saveData();
+        
+        updateAllProfessorLimits();
+    }
+}
     async function removeStudent(professor, index) {
         if (confirm('Tem certeza que deseja remover este aluno?')) {
             studentsData[professor].splice(index, 1);
@@ -1828,3 +1833,4 @@
     });
 
 </script>
+
